@@ -7,6 +7,7 @@ import {
   insertRiskSettingsSchema 
 } from "@shared/schema";
 import { z } from "zod";
+import { getMarketDataProvider, updateStockPrices, updateOptionPrices } from "./market-data";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Portfolio routes
@@ -350,6 +351,186 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Suggestions calculation error:", error);
       res.status(500).json({ error: "Failed to generate suggestions" });
+    }
+  });
+
+  // CSV Import for stocks
+  app.post("/api/portfolio/:id/stocks/import", async (req, res) => {
+    const portfolioId = parseInt(req.params.id);
+    const { csvData } = req.body;
+    
+    if (!csvData) {
+      return res.status(400).json({ error: "CSV data is required" });
+    }
+
+    try {
+      const lines = csvData.trim().split('\n');
+      if (lines.length < 2) {
+        return res.status(400).json({ error: "CSV must contain header and at least one data row" });
+      }
+
+      const headers = lines[0].split(',').map((h: string) => h.trim());
+      const requiredHeaders = ['symbol', 'quantity', 'costPrice'];
+      
+      for (const header of requiredHeaders) {
+        if (!headers.includes(header)) {
+          return res.status(400).json({ error: `Missing required column: ${header}` });
+        }
+      }
+
+      let importedCount = 0;
+      const errors: string[] = [];
+
+      for (let i = 1; i < lines.length; i++) {
+        const values = lines[i].split(',').map((v: string) => v.trim());
+        if (values.length !== headers.length) {
+          errors.push(`Row ${i + 1}: Column count mismatch`);
+          continue;
+        }
+
+        const rowData: any = {};
+        headers.forEach((header: string, index: number) => {
+          rowData[header] = values[index];
+        });
+
+        try {
+          const holding = {
+            portfolioId,
+            symbol: rowData.symbol,
+            name: rowData.name || null,
+            quantity: parseInt(rowData.quantity),
+            costPrice: rowData.costPrice,
+            currentPrice: rowData.currentPrice || null,
+            beta: rowData.beta || null
+          };
+
+          await storage.createStockHolding(holding);
+          importedCount++;
+        } catch (error) {
+          errors.push(`Row ${i + 1}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+      }
+
+      res.json({ 
+        count: importedCount, 
+        errors: errors.length > 0 ? errors : undefined 
+      });
+    } catch (error) {
+      res.status(400).json({ error: error instanceof Error ? error.message : 'Unknown error' });
+    }
+  });
+
+  // CSV Import for options
+  app.post("/api/portfolio/:id/options/import", async (req, res) => {
+    const portfolioId = parseInt(req.params.id);
+    const { csvData } = req.body;
+    
+    if (!csvData) {
+      return res.status(400).json({ error: "CSV data is required" });
+    }
+
+    try {
+      const lines = csvData.trim().split('\n');
+      if (lines.length < 2) {
+        return res.status(400).json({ error: "CSV must contain header and at least one data row" });
+      }
+
+      const headers = lines[0].split(',').map((h: string) => h.trim());
+      const requiredHeaders = ['optionSymbol', 'underlyingSymbol', 'optionType', 'direction', 'contracts', 'strikePrice', 'expirationDate', 'costPrice'];
+      
+      for (const header of requiredHeaders) {
+        if (!headers.includes(header)) {
+          return res.status(400).json({ error: `Missing required column: ${header}` });
+        }
+      }
+
+      let importedCount = 0;
+      const errors: string[] = [];
+
+      for (let i = 1; i < lines.length; i++) {
+        const values = lines[i].split(',').map((v: string) => v.trim());
+        if (values.length !== headers.length) {
+          errors.push(`Row ${i + 1}: Column count mismatch`);
+          continue;
+        }
+
+        const rowData: any = {};
+        headers.forEach((header: string, index: number) => {
+          rowData[header] = values[index];
+        });
+
+        try {
+          const holding = {
+            portfolioId,
+            optionSymbol: rowData.optionSymbol,
+            underlyingSymbol: rowData.underlyingSymbol,
+            optionType: rowData.optionType,
+            direction: rowData.direction,
+            contracts: parseInt(rowData.contracts),
+            strikePrice: rowData.strikePrice,
+            expirationDate: rowData.expirationDate,
+            costPrice: rowData.costPrice,
+            currentPrice: rowData.currentPrice || null,
+            deltaValue: rowData.deltaValue || null
+          };
+
+          await storage.createOptionHolding(holding);
+          importedCount++;
+        } catch (error) {
+          errors.push(`Row ${i + 1}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+      }
+
+      res.json({ 
+        count: importedCount, 
+        errors: errors.length > 0 ? errors : undefined 
+      });
+    } catch (error) {
+      res.status(400).json({ error: error instanceof Error ? error.message : 'Unknown error' });
+    }
+  });
+
+  // Market data refresh endpoint
+  app.post("/api/portfolio/:id/refresh-prices", async (req, res) => {
+    const portfolioId = parseInt(req.params.id);
+    
+    try {
+      // Get current holdings
+      const stockHoldings = await storage.getStockHoldings(portfolioId);
+      const optionHoldings = await storage.getOptionHoldings(portfolioId);
+      
+      // Update prices from market data provider
+      const updatedStocks = await updateStockPrices(stockHoldings);
+      const updatedOptions = await updateOptionPrices(optionHoldings);
+      
+      // Update each holding in storage
+      let stocksUpdated = 0;
+      for (const stock of updatedStocks) {
+        const result = await storage.updateStockHolding(stock.id, {
+          currentPrice: stock.currentPrice
+        });
+        if (result) stocksUpdated++;
+      }
+      
+      let optionsUpdated = 0;
+      for (const option of updatedOptions) {
+        const result = await storage.updateOptionHolding(option.id, {
+          currentPrice: option.currentPrice
+        });
+        if (result) optionsUpdated++;
+      }
+      
+      res.json({
+        success: true,
+        stocksUpdated,
+        optionsUpdated,
+        message: `Updated ${stocksUpdated} stock prices and ${optionsUpdated} option prices`
+      });
+    } catch (error) {
+      console.error("Price refresh error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to refresh prices" 
+      });
     }
   });
 

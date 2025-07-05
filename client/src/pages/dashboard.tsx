@@ -10,13 +10,17 @@ import { RiskAnalysis } from "@/components/risk-analysis";
 import { SmartSuggestions } from "@/components/smart-suggestions";
 import { SettingsPanel } from "@/components/settings-panel";
 import { AddHoldingDialog } from "@/components/add-holding-dialog";
-import { ChartLine, Settings, Clock, RotateCcw } from "lucide-react";
+import { CsvImportDialog } from "@/components/csv-import-dialog";
+import { ChartLine, Settings, Clock, RotateCcw, Upload, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useMutation } from "@tanstack/react-query";
 
 export default function Dashboard() {
   const [lastUpdate, setLastUpdate] = useState(new Date());
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [addDialogType, setAddDialogType] = useState<"stock" | "option">("stock");
+  const [csvImportOpen, setCsvImportOpen] = useState(false);
   const { toast } = useToast();
 
   // Default to portfolio ID 1 for the demo
@@ -27,11 +31,11 @@ export default function Dashboard() {
     queryKey: [`/api/portfolio/${portfolioId}`],
   });
 
-  const { data: stockHoldings, isLoading: stocksLoading } = useQuery({
+  const { data: stockHoldings = [], isLoading: stocksLoading } = useQuery({
     queryKey: [`/api/portfolio/${portfolioId}/stocks`],
   });
 
-  const { data: optionHoldings, isLoading: optionsLoading } = useQuery({
+  const { data: optionHoldings = [], isLoading: optionsLoading } = useQuery({
     queryKey: [`/api/portfolio/${portfolioId}/options`],
   });
 
@@ -39,7 +43,7 @@ export default function Dashboard() {
     queryKey: [`/api/portfolio/${portfolioId}/risk`],
   });
 
-  const { data: suggestions, isLoading: suggestionsLoading } = useQuery({
+  const { data: suggestions = [], isLoading: suggestionsLoading } = useQuery({
     queryKey: [`/api/portfolio/${portfolioId}/suggestions`],
   });
 
@@ -49,11 +53,18 @@ export default function Dashboard() {
 
   const handleRefresh = async () => {
     try {
+      // Refresh market prices first
+      const response = await apiRequest("POST", `/api/portfolio/${portfolioId}/refresh-prices`);
+      const result = await response.json();
+      
+      // Then refresh all data
       await refetchRisk();
+      queryClient.invalidateQueries();
       setLastUpdate(new Date());
+      
       toast({
         title: "数据已更新",
-        description: "风险指标已重新计算",
+        description: `${result.message || "风险指标已重新计算"}`,
       });
     } catch (error) {
       toast({
@@ -82,6 +93,45 @@ export default function Dashboard() {
       minute: '2-digit',
       second: '2-digit',
       hour12: false
+    });
+  };
+
+  const handleExportData = () => {
+    if (!stockHoldings || !optionHoldings) {
+      toast({
+        title: "No data to export",
+        description: "Please wait for data to load",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Export stock holdings
+    const stockHeaders = ["symbol", "name", "quantity", "costPrice", "currentPrice", "beta"];
+    const stockRows = stockHoldings.map(h => [
+      h.symbol,
+      h.name || "",
+      h.quantity,
+      h.costPrice,
+      h.currentPrice || "",
+      h.beta || ""
+    ]);
+    const stockCsv = [stockHeaders, ...stockRows].map(row => row.join(",")).join("\n");
+
+    // Create and download CSV
+    const blob = new Blob([stockCsv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `portfolio_stocks_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    toast({
+      title: "Export successful",
+      description: "Stock holdings exported to CSV"
     });
   };
 
@@ -243,12 +293,18 @@ export default function Dashboard() {
                 <Settings className="mr-2 h-4 w-4" />
                 添加期权持仓
               </Button>
-              <Button variant="secondary">
-                <ChartLine className="mr-2 h-4 w-4" />
+              <Button 
+                variant="secondary"
+                onClick={() => setCsvImportOpen(true)}
+              >
+                <Upload className="mr-2 h-4 w-4" />
                 导入CSV
               </Button>
-              <Button variant="secondary">
-                <ChartLine className="mr-2 h-4 w-4" />
+              <Button 
+                variant="secondary"
+                onClick={() => handleExportData()}
+              >
+                <Download className="mr-2 h-4 w-4" />
                 导出数据
               </Button>
             </div>
@@ -286,6 +342,12 @@ export default function Dashboard() {
         open={addDialogOpen}
         onOpenChange={setAddDialogOpen}
         type={addDialogType}
+        portfolioId={portfolioId}
+      />
+      
+      <CsvImportDialog
+        open={csvImportOpen}
+        onOpenChange={setCsvImportOpen}
         portfolioId={portfolioId}
       />
     </div>
