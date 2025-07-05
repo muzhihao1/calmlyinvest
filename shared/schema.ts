@@ -76,6 +76,21 @@ export const riskSettings = pgTable("risk_settings", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+export const riskHistory = pgTable("risk_history", {
+  id: serial("id").primaryKey(),
+  portfolioId: integer("portfolio_id").references(() => portfolios.id),
+  leverageRatio: decimal("leverage_ratio", { precision: 10, scale: 4 }),
+  portfolioBeta: decimal("portfolio_beta", { precision: 10, scale: 4 }),
+  maxConcentration: decimal("max_concentration", { precision: 10, scale: 4 }),
+  marginUsageRatio: decimal("margin_usage_ratio", { precision: 10, scale: 4 }),
+  remainingLiquidity: decimal("remaining_liquidity", { precision: 20, scale: 2 }),
+  riskLevel: text("risk_level"),
+  stockValue: decimal("stock_value", { precision: 20, scale: 2 }),
+  optionMaxLoss: decimal("option_max_loss", { precision: 20, scale: 2 }),
+  totalEquity: decimal("total_equity", { precision: 20, scale: 2 }),
+  recordedAt: timestamp("recorded_at").defaultNow(),
+});
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,

@@ -112,6 +112,13 @@ The system features a modern React frontend with TypeScript, an Express.js backe
 
 Changelog:
 - July 05, 2025. Initial setup
+- July 05, 2025. Enhanced features:
+  - Added CSV import/export functionality for bulk data management
+  - Implemented real-time market data service with automatic price updates (5-minute intervals)
+  - Added comprehensive data visualization with charts (portfolio composition, risk trends, holdings analysis)
+  - Improved mobile responsiveness throughout the dashboard
+  - Added risk history table to track historical risk metrics
+  - Enhanced tab navigation for mobile devices with condensed labels
 
 ## User Preferences
 

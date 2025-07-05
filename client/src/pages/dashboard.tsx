@@ -11,6 +11,7 @@ import { SmartSuggestions } from "@/components/smart-suggestions";
 import { SettingsPanel } from "@/components/settings-panel";
 import { AddHoldingDialog } from "@/components/add-holding-dialog";
 import { CsvImportDialog } from "@/components/csv-import-dialog";
+import { PortfolioCharts } from "@/components/portfolio-charts";
 import { ChartLine, Settings, Clock, RotateCcw, Upload, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -157,7 +158,7 @@ export default function Dashboard() {
                 <ChartLine className="text-primary text-2xl mr-3" />
                 <h1 className="text-xl font-bold text-white">智能仓位管家</h1>
               </div>
-              <span className="text-sm text-gray-400">Stock Portfolio Risk Manager</span>
+              <span className="text-sm text-gray-400 hidden lg:inline">Stock Portfolio Risk Manager</span>
             </div>
             
             <div className="flex items-center space-x-4">
@@ -229,22 +230,31 @@ export default function Dashboard() {
 
         {/* Tabs */}
         <Tabs defaultValue="holdings" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 bg-slate-800">
-            <TabsTrigger value="holdings" className="data-[state=active]:bg-primary">
-              <ChartLine className="mr-2 h-4 w-4" />
-              持仓管理
+          <TabsList className="grid w-full grid-cols-5 bg-slate-800 overflow-x-auto">
+            <TabsTrigger value="holdings" className="data-[state=active]:bg-primary text-xs md:text-sm">
+              <ChartLine className="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4" />
+              <span className="hidden sm:inline">持仓管理</span>
+              <span className="sm:hidden">持仓</span>
             </TabsTrigger>
-            <TabsTrigger value="analysis" className="data-[state=active]:bg-primary">
-              <ChartLine className="mr-2 h-4 w-4" />
-              风险分析
+            <TabsTrigger value="charts" className="data-[state=active]:bg-primary text-xs md:text-sm">
+              <ChartLine className="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4" />
+              <span className="hidden sm:inline">图表分析</span>
+              <span className="sm:hidden">图表</span>
             </TabsTrigger>
-            <TabsTrigger value="suggestions" className="data-[state=active]:bg-primary">
-              <ChartLine className="mr-2 h-4 w-4" />
-              智能建议
+            <TabsTrigger value="analysis" className="data-[state=active]:bg-primary text-xs md:text-sm">
+              <ChartLine className="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4" />
+              <span className="hidden sm:inline">风险分析</span>
+              <span className="sm:hidden">风险</span>
             </TabsTrigger>
-            <TabsTrigger value="settings" className="data-[state=active]:bg-primary">
-              <Settings className="mr-2 h-4 w-4" />
-              设置
+            <TabsTrigger value="suggestions" className="data-[state=active]:bg-primary text-xs md:text-sm">
+              <ChartLine className="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4" />
+              <span className="hidden sm:inline">智能建议</span>
+              <span className="sm:hidden">建议</span>
+            </TabsTrigger>
+            <TabsTrigger value="settings" className="data-[state=active]:bg-primary text-xs md:text-sm">
+              <Settings className="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4" />
+              <span className="hidden sm:inline">设置</span>
+              <span className="sm:hidden">设置</span>
             </TabsTrigger>
           </TabsList>
 
@@ -312,6 +322,15 @@ export default function Dashboard() {
             {/* Holdings Tables */}
             <HoldingsTable holdings={stockHoldings || []} portfolioId={portfolioId} />
             <OptionsTable holdings={optionHoldings || []} portfolioId={portfolioId} />
+          </TabsContent>
+
+          <TabsContent value="charts">
+            <PortfolioCharts 
+              stockHoldings={stockHoldings || []} 
+              optionHoldings={optionHoldings || []}
+              riskMetrics={riskMetrics}
+              portfolio={portfolio}
+            />
           </TabsContent>
 
           <TabsContent value="analysis">
