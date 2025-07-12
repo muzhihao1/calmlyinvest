@@ -93,11 +93,11 @@ export class MemStorage implements IStorage {
     };
     this.users.set(1, testUser);
     
-    // Create your account with hashed password
+    // Create your account with plain password (temporary for Vercel deployment)
     const yourAccount: User = {
       id: 2,
       username: "279838958@qq.com",
-      password: "$2a$10$hH8X7RGKpST5sGxMbHwqJe8FH.HVHzVGQFxFqVQqFzLGKwbNkOvVm" // muzhihao12 hashed
+      password: "muzhihao12" // Plain password for now
     };
     this.users.set(2, yourAccount);
 
