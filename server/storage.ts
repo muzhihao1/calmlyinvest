@@ -89,9 +89,17 @@ export class MemStorage implements IStorage {
     const testUser: User = {
       id: 1,
       username: "test_user",
-      password: "password123"
+      password: "$2a$10$Yk4Z5kKBxCQhJk4F7qQE1OEMXoYLXzQbXVLfVd/qKy9xW5v2c3nLy" // password123 hashed
     };
     this.users.set(1, testUser);
+    
+    // Create your account with hashed password
+    const yourAccount: User = {
+      id: 2,
+      username: "279838958@qq.com",
+      password: "$2a$10$hH8X7RGKpST5sGxMbHwqJe8FH.HVHzVGQFxFqVQqFzLGKwbNkOvVm" // muzhihao12 hashed
+    };
+    this.users.set(2, yourAccount);
 
     // Create test portfolio
     const testPortfolio: Portfolio = {
@@ -263,11 +271,182 @@ export class MemStorage implements IStorage {
       updatedAt: new Date()
     };
     this.riskSettings.set(1, defaultSettings);
+    
+    // Create portfolio for your account
+    const yourPortfolio: Portfolio = {
+      id: 2,
+      userId: 2,
+      name: "Main Portfolio",
+      totalEquity: "44337.96",
+      cashBalance: "14387.18",
+      marginUsed: "40580.97",
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    this.portfolios.set(2, yourPortfolio);
+    
+    // Copy all stock holdings to your portfolio
+    const yourStockHoldings: StockHolding[] = [
+      {
+        id: 6,
+        portfolioId: 2,
+        symbol: "AMZN",
+        name: "Amazon.com Inc",
+        quantity: 30,
+        costPrice: "222.31",
+        currentPrice: "225.02",
+        beta: "1.33",
+        createdAt: new Date(),
+        updatedAt: new Date()
+      },
+      {
+        id: 7,
+        portfolioId: 2,
+        symbol: "CRWD",
+        name: "CrowdStrike Holdings",
+        quantity: 10,
+        costPrice: "487.11",
+        currentPrice: "478.45",
+        beta: "1.16",
+        createdAt: new Date(),
+        updatedAt: new Date()
+      },
+      {
+        id: 8,
+        portfolioId: 2,
+        symbol: "PLTR",
+        name: "Palantir Technologies",
+        quantity: 38,
+        costPrice: "143.05",
+        currentPrice: "142.10",
+        beta: "2.64",
+        createdAt: new Date(),
+        updatedAt: new Date()
+      },
+      {
+        id: 9,
+        portfolioId: 2,
+        symbol: "SHOP",
+        name: "Shopify Inc",
+        quantity: 32,
+        costPrice: "115.16",
+        currentPrice: "112.11",
+        beta: "2.63",
+        createdAt: new Date(),
+        updatedAt: new Date()
+      },
+      {
+        id: 10,
+        portfolioId: 2,
+        symbol: "TSLA",
+        name: "Tesla Inc",
+        quantity: 40,
+        costPrice: "309.87",
+        currentPrice: "313.51",
+        beta: "2.46",
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+    ];
+    
+    yourStockHoldings.forEach(holding => {
+      this.stockHoldings.set(holding.id, holding);
+    });
+    
+    // Copy all option holdings to your portfolio
+    const yourOptionHoldings: OptionHolding[] = [
+      {
+        id: 5,
+        portfolioId: 2,
+        optionSymbol: "MSFT 250718P500",
+        underlyingSymbol: "MSFT",
+        optionType: "PUT",
+        direction: "SELL",
+        contracts: -1,
+        strikePrice: "500.00",
+        expirationDate: "2025-07-18",
+        costPrice: "3.31",
+        currentPrice: "2.52",
+        deltaValue: "-0.349",
+        createdAt: new Date(),
+        updatedAt: new Date()
+      },
+      {
+        id: 6,
+        portfolioId: 2,
+        optionSymbol: "NVDA 250822P165",
+        underlyingSymbol: "NVDA",
+        optionType: "PUT",
+        direction: "SELL",
+        contracts: -1,
+        strikePrice: "165.00",
+        expirationDate: "2025-08-22",
+        costPrice: "7.96",
+        currentPrice: "7.55",
+        deltaValue: "-0.465",
+        createdAt: new Date(),
+        updatedAt: new Date()
+      },
+      {
+        id: 7,
+        portfolioId: 2,
+        optionSymbol: "NVDA 250919P170",
+        underlyingSymbol: "NVDA",
+        optionType: "PUT",
+        direction: "SELL",
+        contracts: -1,
+        strikePrice: "170.00",
+        expirationDate: "2025-09-19",
+        costPrice: "14.09",
+        currentPrice: "13.62",
+        deltaValue: "-0.522",
+        createdAt: new Date(),
+        updatedAt: new Date()
+      },
+      {
+        id: 8,
+        portfolioId: 2,
+        optionSymbol: "QQQ 250725P555",
+        underlyingSymbol: "QQQ",
+        optionType: "PUT",
+        direction: "SELL",
+        contracts: -1,
+        strikePrice: "555.00",
+        expirationDate: "2025-07-25",
+        costPrice: "6.13",
+        currentPrice: "6.60",
+        deltaValue: "-0.495",
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+    ];
+    
+    yourOptionHoldings.forEach(holding => {
+      this.optionHoldings.set(holding.id, holding);
+    });
+    
+    // Create risk settings for your account
+    const yourRiskSettings: RiskSettings = {
+      id: 2,
+      userId: 2,
+      leverageSafeThreshold: "1.0",
+      leverageWarningThreshold: "1.5",
+      concentrationLimit: "20.0",
+      industryConcentrationLimit: "60.0",
+      minCashRatio: "30.0",
+      leverageAlerts: true,
+      expirationAlerts: true,
+      volatilityAlerts: false,
+      dataUpdateFrequency: 5,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    this.riskSettings.set(2, yourRiskSettings);
 
-    this.currentUserId = 2;
-    this.currentPortfolioId = 2;
-    this.currentStockHoldingId = 6;
-    this.currentOptionHoldingId = 5;
+    this.currentUserId = 3;
+    this.currentPortfolioId = 3;
+    this.currentStockHoldingId = 11;
+    this.currentOptionHoldingId = 9;
   }
 
   async getUser(id: number): Promise<User | undefined> {
