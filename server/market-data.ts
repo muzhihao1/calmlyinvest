@@ -306,7 +306,7 @@ export async function updateStockPrices(holdings: StockHolding[]): Promise<Stock
         return {
           ...holding,
           currentPrice: quote.price.toFixed(2),
-          beta: quote.beta.toFixed(2),
+          beta: quote.beta?.toFixed(2) || "1.00",
           name: quote.name || holding.name
         };
       }
