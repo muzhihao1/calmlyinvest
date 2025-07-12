@@ -10,6 +10,8 @@ app.use(express.urlencoded({ extended: false }));
 // CORS configuration for production
 app.use((req, res, next) => {
   const allowedOrigins = [
+    'https://calmlyinvest.vercel.app',
+    'https://calmlyinvest-git-main-muzhihao1s-projects.vercel.app',
     process.env.APP_URL || 'http://localhost:3001',
     'http://localhost:3000',
     'http://localhost:3001'
@@ -18,6 +20,11 @@ app.use((req, res, next) => {
   const origin = req.headers.origin;
   if (origin && allowedOrigins.includes(origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin);
+  } else if (process.env.NODE_ENV === 'production') {
+    // In production, allow any Vercel preview URL
+    if (origin && origin.includes('.vercel.app')) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+    }
   }
   
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');

@@ -74,7 +74,12 @@ export function registerAuthRoutes(app: Express) {
       }
       
       // Verify password
+      console.log('Attempting login for user:', username);
+      console.log('Stored password hash:', user.password);
+      console.log('Password to verify:', password);
+      
       const isValidPassword = await bcrypt.compare(password, user.password);
+      console.log('Password validation result:', isValidPassword);
       
       if (!isValidPassword) {
         return res.status(401).json({ error: 'Invalid credentials' });
