@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { useLocation } from 'wouter';
+import { hybridSignIn } from '@/lib/auth-hybrid';
 
 interface AuthContextType {
   user: User | null;
@@ -10,6 +11,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
+  isLegacy?: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -18,15 +20,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isLegacy, setIsLegacy] = useState(false);
   const [, setLocation] = useLocation();
 
   useEffect(() => {
-    // 获取初始会话
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
+    // Check for legacy auth first
+    const token = localStorage.getItem('token');
+    const userId = localStorage.getItem('userId');
+    
+    if (token && userId) {
+      // Create a mock user for legacy auth
+      setUser({
+        id: userId,
+        email: '279838958@qq.com',
+        app_metadata: {},
+        user_metadata: {},
+        aud: 'authenticated',
+        created_at: new Date().toISOString()
+      } as any);
+      setIsLegacy(true);
       setLoading(false);
-    });
+    } else {
+      // 获取初始会话
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        setLoading(false);
+      });
+    }
 
     // 监听认证状态变化
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -37,6 +58,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!session) {
         localStorage.removeItem('token');
         localStorage.removeItem('userId');
+        localStorage.removeItem('numericUserId');
       }
     });
 
@@ -44,12 +66,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    const result = await hybridSignIn(email, password);
     
-    if (error) throw error;
+    setUser(result.user);
+    setSession(result.session);
+    setIsLegacy(result.isLegacy);
     
     // 登录成功后跳转到主页
     setLocation('/');
@@ -73,7 +94,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ user, session, loading, signIn, signUp, signOut, isLegacy }}>
       {children}
     </AuthContext.Provider>
   );

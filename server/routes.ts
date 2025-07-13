@@ -71,10 +71,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Portfolio routes
   app.get("/api/portfolios/:userId", hybridAuth, async (req, res) => {
     try {
-      const userId = parseInt(req.params.userId);
-      const portfolios = await storage.getPortfolios(userId);
+      // Handle both UUID and numeric user IDs
+      const numericUserId = getNumericUserId(req.params.userId);
+      if (!numericUserId) {
+        console.log('No numeric user ID found for:', req.params.userId);
+        return res.json([]); // Return empty array for unknown users
+      }
+      const portfolios = await storage.getPortfolios(numericUserId);
       res.json(portfolios);
     } catch (error) {
+      console.error('Error fetching portfolios:', error);
       res.status(500).json({ error: "Failed to fetch portfolios" });
     }
   });
