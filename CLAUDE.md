@@ -47,7 +47,7 @@ npm run db:push
 │       ├── hooks/        # Custom React hooks
 │       └── lib/          # Utilities and helpers
 ├── server/          # Express backend
-│   ├── routes.ts    # API endpoint definitions
+│   ├── routes-supabase.ts # API endpoint definitions with Supabase auth
 │   ├── storage.ts   # Database access layer
 │   └── market-data.ts # Market price updates
 ├── shared/          # Shared types and schemas

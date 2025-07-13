@@ -174,36 +174,8 @@ export default function Dashboard() {
     );
   }
 
-  // Check if user has no portfolio
-  if (!portfolioId && !isGuest) {
-    return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
-        <div className="text-center">
-          <ChartLine className="text-primary text-5xl mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-white mb-2">欢迎使用智能仓位管家</h2>
-          <p className="text-gray-400 mb-6">您还没有创建投资组合</p>
-          <Button 
-            onClick={() => {
-              // TODO: Add create portfolio dialog
-              toast({
-                title: "即将推出",
-                description: "创建投资组合功能正在开发中",
-              });
-            }}
-            className="mr-4"
-          >
-            创建投资组合
-          </Button>
-          <Button 
-            variant="outline"
-            onClick={() => window.location.href = "/?guest=true"}
-          >
-            使用访客模式
-          </Button>
-        </div>
-      </div>
-    );
-  }
+  // If no portfolio and user is logged in, show create portfolio message
+  // Otherwise, guest mode will handle showing demo data
 
   return (
     <div className="min-h-screen bg-slate-900">
@@ -220,7 +192,11 @@ export default function Dashboard() {
             </div>
             
             <div className="flex items-center space-x-4">
-              {!isLoggedIn && (
+              {isLoggedIn ? (
+                <span className="text-sm text-gray-300">
+                  {user?.email}
+                </span>
+              ) : (
                 <span className="text-sm text-yellow-400 hidden md:inline">
                   访客模式 - 数据仅保存在本地
                 </span>

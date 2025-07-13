@@ -50,15 +50,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
-      setUser(session?.user ?? null);
+      if (session?.user) {
+        setUser(session.user);
+        setIsGuest(false);
+      } else {
+        // No authenticated user, automatically enter guest mode
+        setIsGuest(true);
+        setUser(GUEST_USER);
+      }
       setLoading(false);
     });
 
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
-      setUser(session?.user ?? null);
-      setIsGuest(false); // Exit guest mode on auth state change
+      if (session?.user) {
+        setUser(session.user);
+        setIsGuest(false);
+      } else {
+        // User logged out, return to guest mode
+        setIsGuest(true);
+        setUser(GUEST_USER);
+      }
     });
 
     return () => subscription.unsubscribe();
