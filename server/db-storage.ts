@@ -1,15 +1,17 @@
-import { drizzle } from 'drizzle-orm/postgres-js';
-import postgres from 'postgres';
 import { eq } from 'drizzle-orm';
 import * as schema from '@shared/schema';
 import type { IStorage } from './storage';
+import { getDatabaseConnection } from './config/database';
 
 export class DbStorage implements IStorage {
   private db;
   
   constructor(databaseUrl: string) {
-    const client = postgres(databaseUrl);
-    this.db = drizzle(client, { schema });
+    const connection = getDatabaseConnection();
+    if (!connection) {
+      throw new Error('Database connection not available');
+    }
+    this.db = connection.db;
   }
 
   // User operations

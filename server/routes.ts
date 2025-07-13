@@ -13,6 +13,47 @@ import { authenticateSupabase, optionalAuthSupabase } from "./auth-middleware-su
 import { hybridAuth } from "./auth-hybrid";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Health check endpoint
+  app.get("/api/health", async (req, res) => {
+    try {
+      // Test Supabase connectivity if configured
+      if (process.env.SUPABASE_URL) {
+        const { createClient } = await import('@supabase/supabase-js');
+        const supabase = createClient(
+          process.env.SUPABASE_URL,
+          process.env.SUPABASE_ANON_KEY || ''
+        );
+        
+        // Simple connectivity check
+        const { error } = await Promise.race([
+          supabase.from('profiles').select('count').limit(1),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Supabase health check timeout')), 5000)
+          )
+        ]);
+        
+        res.json({ 
+          status: 'ok',
+          storage: process.env.DATABASE_URL ? 'database' : 'memory',
+          supabase: error ? 'error' : 'connected',
+          timestamp: new Date().toISOString()
+        });
+      } else {
+        res.json({ 
+          status: 'ok',
+          storage: 'memory',
+          timestamp: new Date().toISOString()
+        });
+      }
+    } catch (error: any) {
+      res.status(503).json({ 
+        status: 'error',
+        message: error.message,
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+  
   // Register auth routes (no authentication required)
   registerAuthRoutes(app);
   
@@ -254,8 +295,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Risk settings routes
   app.get("/api/user/:userId/risk-settings", hybridAuth, async (req, res) => {
     try {
-      const userId = parseInt(req.params.userId);
-      const settings = await storage.getRiskSettings(userId);
+      // Handle both UUID and numeric user IDs
+      const numericUserId = getNumericUserId(req.params.userId);
+      if (!numericUserId) {
+        // Return default settings for unknown users
+        return res.json({
+          leverageSafeThreshold: "1.0",
+          leverageWarningThreshold: "1.5",
+          concentrationLimit: "20.0",
+          industryConcentrationLimit: "60.0",
+          minCashRatio: "30.0",
+          leverageAlerts: true,
+          expirationAlerts: true,
+          volatilityAlerts: false,
+          dataUpdateFrequency: 5
+        });
+      }
+      const settings = await storage.getRiskSettings(numericUserId);
       res.json(settings);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch risk settings" });
@@ -264,7 +320,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/user/:userId/risk-settings", hybridAuth, async (req, res) => {
     try {
-      const userId = parseInt(req.params.userId);
+      // Handle both UUID and numeric user IDs
+      const numericUserId = getNumericUserId(req.params.userId);
+      if (!numericUserId) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      const userId = numericUserId;
       const validatedData = insertRiskSettingsSchema.parse({
         ...req.body,
         userId
