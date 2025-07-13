@@ -12,13 +12,18 @@ export async function apiRequest(
   method: string,
   url: string,
   data?: unknown | undefined,
+  isGuestMode?: boolean,
 ): Promise<Response> {
   // 获取Supabase session
   const { data: { session } } = await supabase.auth.getSession();
   const headers: HeadersInit = {};
   
-  // 使用Supabase的access token
-  if (session?.access_token) {
+  // Check if in guest mode - if explicitly passed or user is guest-user or demo portfolio
+  const guestMode = isGuestMode || url.includes('guest-user') || url.includes('demo-portfolio');
+  
+  if (guestMode) {
+    headers["Authorization"] = "Bearer guest-mode";
+  } else if (session?.access_token) {
     headers["Authorization"] = `Bearer ${session.access_token}`;
   }
   
@@ -45,12 +50,18 @@ export const getQueryFn: <T>(options: {
   async ({ queryKey }) => {
     const { data: { session } } = await supabase.auth.getSession();
     const headers: HeadersInit = {};
+    const url = queryKey[0] as string;
     
-    if (session?.access_token) {
+    // Check if in guest mode - if URL contains guest-user or demo portfolio
+    const isGuestMode = url.includes('guest-user') || url.includes('demo-portfolio');
+    
+    if (isGuestMode) {
+      headers["Authorization"] = "Bearer guest-mode";
+    } else if (session?.access_token) {
       headers["Authorization"] = `Bearer ${session.access_token}`;
     }
     
-    const res = await fetch(queryKey[0] as string, {
+    const res = await fetch(url, {
       headers,
       credentials: "include",
     });

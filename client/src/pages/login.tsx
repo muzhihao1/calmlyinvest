@@ -9,16 +9,16 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
 import { TrendingUp } from "lucide-react";
+import { useAuth } from "@/contexts/auth-context";
 
 const loginSchema = z.object({
-  username: z.string().min(3, "用户名至少3个字符"),
+  email: z.string().email("请输入有效的邮箱地址"),
   password: z.string().min(6, "密码至少6个字符"),
 });
 
 const registerSchema = z.object({
-  username: z.string().min(3, "用户名至少3个字符"),
+  email: z.string().email("请输入有效的邮箱地址"),
   password: z.string().min(6, "密码至少6个字符"),
   confirmPassword: z.string(),
 }).refine(data => data.password === data.confirmPassword, {
@@ -30,11 +30,12 @@ export function LoginPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const { signIn, signUp } = useAuth();
 
   const loginForm = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      username: "",
+      email: "",
       password: "",
     },
   });
@@ -42,7 +43,7 @@ export function LoginPage() {
   const registerForm = useForm<z.infer<typeof registerSchema>>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
-      username: "",
+      email: "",
       password: "",
       confirmPassword: "",
     },
@@ -51,28 +52,15 @@ export function LoginPage() {
   const onLogin = async (data: z.infer<typeof loginSchema>) => {
     setIsLoading(true);
     try {
-      const response = await apiRequest("POST", "/api/auth/login", data);
-      const result = await response.json();
-      
-      if (response.ok) {
-        localStorage.setItem("token", result.token);
-        localStorage.setItem("userId", result.userId);
-        toast({
-          title: "登录成功",
-          description: "欢迎回来！",
-        });
-        setLocation("/");
-      } else {
-        toast({
-          title: "登录失败",
-          description: result.error || "用户名或密码错误",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
+      await signIn(data.email, data.password);
+      toast({
+        title: "登录成功",
+        description: "欢迎回来！",
+      });
+    } catch (error: any) {
       toast({
         title: "登录失败",
-        description: "网络错误，请稍后重试",
+        description: error.message || "邮箱或密码错误",
         variant: "destructive",
       });
     } finally {
@@ -83,31 +71,18 @@ export function LoginPage() {
   const onRegister = async (data: z.infer<typeof registerSchema>) => {
     setIsLoading(true);
     try {
-      const response = await apiRequest("POST", "/api/auth/register", {
-        username: data.username,
-        password: data.password,
+      await signUp(data.email, data.password);
+      toast({
+        title: "注册成功",
+        description: "请查看邮箱确认注册",
       });
-      const result = await response.json();
-      
-      if (response.ok) {
-        toast({
-          title: "注册成功",
-          description: "请使用新账号登录",
-        });
-        // Switch to login tab
-        const loginTab = document.querySelector('[value="login"]') as HTMLElement;
-        if (loginTab) loginTab.click();
-      } else {
-        toast({
-          title: "注册失败",
-          description: result.error || "注册过程中出现错误",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
+      // Switch to login tab
+      const loginTab = document.querySelector('[value="login"]') as HTMLElement;
+      if (loginTab) loginTab.click();
+    } catch (error: any) {
       toast({
         title: "注册失败",
-        description: "网络错误，请稍后重试",
+        description: error.message || "注册过程中出现错误",
         variant: "destructive",
       });
     } finally {
@@ -115,10 +90,16 @@ export function LoginPage() {
     }
   };
 
-  const handleDemoLogin = () => {
-    loginForm.setValue("username", "demo");
-    loginForm.setValue("password", "demo123");
+  const handleDemoLogin = async () => {
+    // Use test account for demo
+    loginForm.setValue("email", "279838958@qq.com");
+    loginForm.setValue("password", "123456");
     loginForm.handleSubmit(onLogin)();
+  };
+
+  const handleGuestMode = () => {
+    // Navigate directly to dashboard in guest mode
+    setLocation("/?guest=true");
   };
 
   return (
@@ -146,13 +127,14 @@ export function LoginPage() {
                 <form onSubmit={loginForm.handleSubmit(onLogin)} className="space-y-4">
                   <FormField
                     control={loginForm.control}
-                    name="username"
+                    name="email"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-gray-300">用户名</FormLabel>
+                        <FormLabel className="text-gray-300">邮箱</FormLabel>
                         <FormControl>
                           <Input
-                            placeholder="请输入用户名"
+                            type="email"
+                            placeholder="请输入邮箱"
                             className="bg-slate-700 border-gray-600 text-white"
                             {...field}
                           />
@@ -197,13 +179,14 @@ export function LoginPage() {
                 <form onSubmit={registerForm.handleSubmit(onRegister)} className="space-y-4">
                   <FormField
                     control={registerForm.control}
-                    name="username"
+                    name="email"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-gray-300">用户名</FormLabel>
+                        <FormLabel className="text-gray-300">邮箱</FormLabel>
                         <FormControl>
                           <Input
-                            placeholder="请输入用户名"
+                            type="email"
+                            placeholder="请输入邮箱"
                             className="bg-slate-700 border-gray-600 text-white"
                             {...field}
                           />
@@ -264,13 +247,20 @@ export function LoginPage() {
           </Tabs>
         </CardContent>
         
-        <CardFooter>
+        <CardFooter className="flex flex-col gap-2">
           <Button 
             variant="outline" 
             className="w-full"
+            onClick={handleGuestMode}
+          >
+            访客模式（无需登录）
+          </Button>
+          <Button 
+            variant="ghost" 
+            className="w-full text-sm text-gray-400"
             onClick={handleDemoLogin}
           >
-            使用演示账号登录
+            使用测试账号登录
           </Button>
         </CardFooter>
       </Card>

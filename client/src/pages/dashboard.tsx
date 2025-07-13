@@ -26,39 +26,44 @@ export default function Dashboard() {
   const [addDialogType, setAddDialogType] = useState<"stock" | "option">("stock");
   const [csvImportOpen, setCsvImportOpen] = useState(false);
   const { toast } = useToast();
-  const { user, signOut } = useAuth();
+  const { user, signOut, isGuest } = useAuth();
 
   // Get userId from Supabase user or use guest mode
-  const userId = user?.id || localStorage.getItem("guestUserId") || "guest";
-  const isLoggedIn = !!user;
+  const userId = user?.id || "guest-user";
+  const isLoggedIn = !isGuest && !!user;
   
   // Fetch user's portfolios
   const { data: portfolios = [] } = useQuery<Portfolio[]>({
     queryKey: [`/api/portfolios/${userId}`],
+    enabled: !!userId,
   });
   
-  // Use the first portfolio (TODO: Support multiple portfolios in future)
-  const portfolioId = portfolios[0]?.id || 1;
+  // Use the first portfolio or null (don't default to 1 for UUID-based system)
+  const portfolioId = portfolios[0]?.id || null;
 
   const { data: portfolio, isLoading: portfolioLoading } = useQuery<Portfolio>({
     queryKey: [`/api/portfolio/${portfolioId}`],
-    enabled: portfolioId !== 1 || portfolios.length > 0,
+    enabled: !!portfolioId,
   });
 
   const { data: stockHoldings = [], isLoading: stocksLoading } = useQuery<StockHolding[]>({
     queryKey: [`/api/portfolio/${portfolioId}/stocks`],
+    enabled: !!portfolioId,
   });
 
   const { data: optionHoldings = [], isLoading: optionsLoading } = useQuery<OptionHolding[]>({
     queryKey: [`/api/portfolio/${portfolioId}/options`],
+    enabled: !!portfolioId,
   });
 
   const { data: riskMetrics = {}, isLoading: riskLoading, refetch: refetchRisk } = useQuery<any>({
     queryKey: [`/api/portfolio/${portfolioId}/risk`],
+    enabled: !!portfolioId,
   });
 
   const { data: suggestions = [], isLoading: suggestionsLoading } = useQuery<Suggestion[]>({
     queryKey: [`/api/portfolio/${portfolioId}/suggestions`],
+    enabled: !!portfolioId,
   });
 
   const { data: riskSettings } = useQuery<RiskSettings>({
@@ -66,6 +71,15 @@ export default function Dashboard() {
   });
 
   const handleRefresh = async () => {
+    if (!portfolioId) {
+      toast({
+        title: "无投资组合",
+        description: "请先创建投资组合",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     try {
       // Refresh market prices first
       const response = await apiRequest("POST", `/api/portfolio/${portfolioId}/refresh-prices`);
@@ -155,6 +169,37 @@ export default function Dashboard() {
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
           <p className="text-gray-400">加载中...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Check if user has no portfolio
+  if (!portfolioId && !isGuest) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+        <div className="text-center">
+          <ChartLine className="text-primary text-5xl mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-white mb-2">欢迎使用智能仓位管家</h2>
+          <p className="text-gray-400 mb-6">您还没有创建投资组合</p>
+          <Button 
+            onClick={() => {
+              // TODO: Add create portfolio dialog
+              toast({
+                title: "即将推出",
+                description: "创建投资组合功能正在开发中",
+              });
+            }}
+            className="mr-4"
+          >
+            创建投资组合
+          </Button>
+          <Button 
+            variant="outline"
+            onClick={() => window.location.href = "/?guest=true"}
+          >
+            使用访客模式
+          </Button>
         </div>
       </div>
     );

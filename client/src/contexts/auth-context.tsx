@@ -2,99 +2,118 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { useLocation } from 'wouter';
-import { hybridSignIn } from '@/lib/auth-hybrid';
+import { signIn as supabaseSignIn, signUp as supabaseSignUp, signOut as supabaseSignOut } from '@/lib/auth';
 
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
+  isGuest: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
-  isLegacy?: boolean;
+  enterGuestMode: () => void;
+  exitGuestMode: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+// Guest user object
+const GUEST_USER: User = {
+  id: 'guest-user',
+  email: 'guest@example.com',
+  app_metadata: {},
+  user_metadata: {},
+  aud: 'authenticated',
+  created_at: new Date().toISOString()
+} as User;
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isLegacy, setIsLegacy] = useState(false);
-  const [, setLocation] = useLocation();
+  const [isGuest, setIsGuest] = useState(false);
+  const [location, setLocation] = useLocation();
 
   useEffect(() => {
-    // Check for legacy auth first
-    const token = localStorage.getItem('token');
-    const userId = localStorage.getItem('userId');
-    
-    if (token && userId) {
-      // Create a mock user for legacy auth
-      setUser({
-        id: userId,
-        email: '279838958@qq.com',
-        app_metadata: {},
-        user_metadata: {},
-        aud: 'authenticated',
-        created_at: new Date().toISOString()
-      } as any);
-      setIsLegacy(true);
+    // Check for guest mode from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('guest') === 'true') {
+      setIsGuest(true);
+      setUser(GUEST_USER);
       setLoading(false);
-    } else {
-      // 获取初始会话
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        setLoading(false);
-      });
+      // Remove guest parameter from URL
+      window.history.replaceState({}, '', window.location.pathname);
+      return;
     }
 
-    // 监听认证状态变化
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
+
+    // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
-      
-      // 如果登出，清理本地存储
-      if (!session) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('userId');
-        localStorage.removeItem('numericUserId');
-      }
+      setIsGuest(false); // Exit guest mode on auth state change
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const result = await hybridSignIn(email, password);
+    const { user, session } = await supabaseSignIn(email, password);
     
-    setUser(result.user);
-    setSession(result.session);
-    setIsLegacy(result.isLegacy);
+    setUser(user);
+    setSession(session);
+    setIsGuest(false); // Exit guest mode on sign in
     
-    // 登录成功后跳转到主页
+    // Redirect to dashboard after successful login
     setLocation('/');
   };
 
   const signUp = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-    });
-    
-    if (error) throw error;
+    await supabaseSignUp(email, password);
+    setIsGuest(false); // Exit guest mode on sign up
   };
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
+    await supabaseSignOut();
+    setIsGuest(false);
     
-    // 登出后跳转到登录页
+    // Redirect to login page after logout
+    setLocation('/login');
+  };
+
+  const enterGuestMode = () => {
+    setIsGuest(true);
+    setUser(GUEST_USER);
+    setSession(null);
+    setLocation('/');
+  };
+
+  const exitGuestMode = () => {
+    setIsGuest(false);
+    setUser(null);
+    setSession(null);
     setLocation('/login');
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signIn, signUp, signOut, isLegacy }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      session, 
+      loading, 
+      isGuest,
+      signIn, 
+      signUp, 
+      signOut,
+      enterGuestMode,
+      exitGuestMode 
+    }}>
       {children}
     </AuthContext.Provider>
   );
