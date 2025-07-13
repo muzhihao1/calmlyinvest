@@ -47,12 +47,13 @@ export async function retrySupabaseCall<T>(
 /**
  * Wrapper for fetch with timeout
  */
-export function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutMs: number = 30000): Promise<Response> {
+export function fetchWithTimeout(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
   const controller = new AbortController();
+  const timeoutMs = 30000; // 30 second timeout
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   
-  return fetch(url, {
-    ...options,
+  return fetch(input, {
+    ...init,
     signal: controller.signal
   }).finally(() => clearTimeout(timeout));
 }

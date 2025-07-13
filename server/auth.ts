@@ -6,6 +6,9 @@ import { storage } from './storage';
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 
 // Extend Express Request type
+// Note: auth-middleware-supabase.ts also declares userId
+// Comment out to avoid conflict
+/*
 declare global {
   namespace Express {
     interface Request {
@@ -13,6 +16,7 @@ declare global {
     }
   }
 }
+*/
 
 // Middleware to verify JWT token
 export function authenticateToken(req: Request, res: Response, next: NextFunction) {
@@ -28,7 +32,7 @@ export function authenticateToken(req: Request, res: Response, next: NextFunctio
       return res.status(403).json({ error: 'Invalid or expired token' });
     }
     
-    req.userId = decoded.userId;
+    req.userId = decoded.userId.toString();
     next();
   });
 }
@@ -39,17 +43,17 @@ export function optionalAuth(req: Request, res: Response, next: NextFunction) {
   const token = authHeader && authHeader.split(' ')[1];
   
   if (!token) {
-    // Guest user - use default user ID 1
-    req.userId = 1;
+    // Guest user - use string for consistency
+    req.userId = '1';
     return next();
   }
   
   jwt.verify(token, JWT_SECRET, (err, decoded: any) => {
     if (err) {
       // Invalid token - treat as guest
-      req.userId = 1;
+      req.userId = '1';
     } else {
-      req.userId = decoded.userId;
+      req.userId = decoded.userId.toString();
     }
     next();
   });
@@ -115,7 +119,7 @@ export function registerAuthRoutes(app: Express) {
       console.error('Login error:', error);
       res.status(500).json({ 
         error: 'Login failed',
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        details: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.message : 'Unknown error') : undefined
       });
     }
   });

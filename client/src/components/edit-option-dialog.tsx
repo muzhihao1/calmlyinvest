@@ -87,8 +87,8 @@ export function EditOptionDialog({ open, onOpenChange, option, portfolioId }: Ed
     if (option) {
       form.reset({
         underlyingSymbol: option.underlyingSymbol,
-        optionType: option.optionType,
-        direction: option.direction,
+        optionType: option.optionType as "CALL" | "PUT",
+        direction: option.direction as "BUY" | "SELL",
         contracts: option.contracts,
         strikePrice: option.strikePrice,
         expirationDate: new Date(option.expirationDate),

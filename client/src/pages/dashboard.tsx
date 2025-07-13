@@ -17,6 +17,8 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient-supabase";
 import { useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/auth-context";
+import type { Portfolio, StockHolding, OptionHolding, RiskSettings } from "@shared/schema";
+import type { Suggestion } from "@/components/smart-suggestions";
 
 export default function Dashboard() {
   const [lastUpdate, setLastUpdate] = useState(new Date());
@@ -31,35 +33,35 @@ export default function Dashboard() {
   const isLoggedIn = !!user;
   
   // Fetch user's portfolios
-  const { data: portfolios = [] } = useQuery({
+  const { data: portfolios = [] } = useQuery<Portfolio[]>({
     queryKey: [`/api/portfolios/${userId}`],
   });
   
   // Use the first portfolio (TODO: Support multiple portfolios in future)
   const portfolioId = portfolios[0]?.id || 1;
 
-  const { data: portfolio, isLoading: portfolioLoading } = useQuery({
+  const { data: portfolio, isLoading: portfolioLoading } = useQuery<Portfolio>({
     queryKey: [`/api/portfolio/${portfolioId}`],
     enabled: portfolioId !== 1 || portfolios.length > 0,
   });
 
-  const { data: stockHoldings = [], isLoading: stocksLoading } = useQuery({
+  const { data: stockHoldings = [], isLoading: stocksLoading } = useQuery<StockHolding[]>({
     queryKey: [`/api/portfolio/${portfolioId}/stocks`],
   });
 
-  const { data: optionHoldings = [], isLoading: optionsLoading } = useQuery({
+  const { data: optionHoldings = [], isLoading: optionsLoading } = useQuery<OptionHolding[]>({
     queryKey: [`/api/portfolio/${portfolioId}/options`],
   });
 
-  const { data: riskMetrics, isLoading: riskLoading, refetch: refetchRisk } = useQuery({
+  const { data: riskMetrics = {}, isLoading: riskLoading, refetch: refetchRisk } = useQuery<any>({
     queryKey: [`/api/portfolio/${portfolioId}/risk`],
   });
 
-  const { data: suggestions = [], isLoading: suggestionsLoading } = useQuery({
+  const { data: suggestions = [], isLoading: suggestionsLoading } = useQuery<Suggestion[]>({
     queryKey: [`/api/portfolio/${portfolioId}/suggestions`],
   });
 
-  const { data: riskSettings } = useQuery({
+  const { data: riskSettings } = useQuery<RiskSettings>({
     queryKey: [`/api/user/${userId}/risk-settings`],
   });
 
@@ -408,7 +410,7 @@ export default function Dashboard() {
 
           <TabsContent value="settings">
             <SettingsPanel 
-              userId={userId}
+              userId={typeof userId === 'string' ? parseInt(userId) || 1 : userId}
               currentSettings={riskSettings}
             />
           </TabsContent>

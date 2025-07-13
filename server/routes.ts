@@ -11,6 +11,7 @@ import { getMarketDataProvider, updateStockPrices, updateOptionPrices } from "./
 import { registerAuthRoutes, authenticateToken, optionalAuth } from "./auth";
 import { authenticateSupabase, optionalAuthSupabase } from "./auth-middleware-supabase";
 import { hybridAuth } from "./auth-hybrid";
+import { getNumericUserId } from "./utils/user-mapping";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Health check endpoint
@@ -25,17 +26,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
         
         // Simple connectivity check
-        const { error } = await Promise.race([
-          supabase.from('profiles').select('count').limit(1),
-          new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Supabase health check timeout')), 5000)
-          )
-        ]);
+        let supabaseStatus = 'connected';
+        try {
+          const result = await Promise.race([
+            supabase.from('profiles').select('count').limit(1),
+            new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('Supabase health check timeout')), 5000)
+            )
+          ]) as { error?: any };
+          
+          if (result?.error) {
+            supabaseStatus = 'error';
+          }
+        } catch (timeoutError) {
+          supabaseStatus = 'timeout';
+        }
         
         res.json({ 
           status: 'ok',
           storage: process.env.DATABASE_URL ? 'database' : 'memory',
-          supabase: error ? 'error' : 'connected',
+          supabase: supabaseStatus,
           timestamp: new Date().toISOString()
         });
       } else {
@@ -45,10 +55,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           timestamp: new Date().toISOString()
         });
       }
-    } catch (error: any) {
+    } catch (error) {
       res.status(503).json({ 
         status: 'error',
-        message: error.message,
+        message: error instanceof Error ? error.message : 'Unknown error',
         timestamp: new Date().toISOString()
       });
     }

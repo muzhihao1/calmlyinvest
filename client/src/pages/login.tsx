@@ -95,7 +95,7 @@ export function LoginPage() {
           description: "请使用新账号登录",
         });
         // Switch to login tab
-        const loginTab = document.querySelector('[value="login"]');
+        const loginTab = document.querySelector('[value="login"]') as HTMLElement;
         if (loginTab) loginTab.click();
       } else {
         toast({

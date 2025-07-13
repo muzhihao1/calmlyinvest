@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, TrendingDown, Settings, PieChart, Lightbulb } from "lucide-react";
 
-interface Suggestion {
+export interface Suggestion {
   type: string;
   priority: string;
   title: string;
