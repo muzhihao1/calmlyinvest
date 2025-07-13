@@ -47,3 +47,5 @@ coverage/
 /tmp/
 vite.config.ts.*
 *.tar.gz
+# Test files with credentials
+register-test.html
