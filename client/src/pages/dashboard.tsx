@@ -14,8 +14,9 @@ import { CsvImportDialog } from "@/components/csv-import-dialog";
 import { PortfolioCharts } from "@/components/portfolio-charts";
 import { ChartLine, Settings, Clock, RotateCcw, Upload, Download, LogOut, LogIn } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient-supabase";
 import { useMutation } from "@tanstack/react-query";
+import { useAuth } from "@/contexts/auth-context";
 
 export default function Dashboard() {
   const [lastUpdate, setLastUpdate] = useState(new Date());
@@ -23,10 +24,11 @@ export default function Dashboard() {
   const [addDialogType, setAddDialogType] = useState<"stock" | "option">("stock");
   const [csvImportOpen, setCsvImportOpen] = useState(false);
   const { toast } = useToast();
+  const { user, signOut } = useAuth();
 
-  // Get userId from localStorage (guest mode uses default ID 1)
-  const userId = parseInt(localStorage.getItem("userId") || "1");
-  const isLoggedIn = !!localStorage.getItem("token");
+  // Get userId from Supabase user or use guest mode
+  const userId = user?.id || localStorage.getItem("guestUserId") || "guest";
+  const isLoggedIn = !!user;
   
   // Fetch user's portfolios
   const { data: portfolios = [] } = useQuery({
@@ -195,10 +197,20 @@ export default function Dashboard() {
                   variant="ghost" 
                   size="icon" 
                   className="text-gray-400 hover:text-white"
-                  onClick={() => {
-                    localStorage.removeItem("token");
-                    localStorage.removeItem("userId");
-                    window.location.reload();
+                  onClick={async () => {
+                    try {
+                      await signOut();
+                      toast({
+                        title: "已退出登录",
+                        description: "期待您的再次使用",
+                      });
+                    } catch (error) {
+                      toast({
+                        title: "退出失败",
+                        description: "请稍后重试",
+                        variant: "destructive",
+                      });
+                    }
                   }}
                   title="退出登录"
                 >

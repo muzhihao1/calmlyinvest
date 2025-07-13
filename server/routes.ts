@@ -9,14 +9,16 @@ import {
 import { z } from "zod";
 import { getMarketDataProvider, updateStockPrices, updateOptionPrices } from "./market-data";
 import { registerAuthRoutes, authenticateToken, optionalAuth } from "./auth";
+import { authenticateSupabase, optionalAuthSupabase } from "./auth-middleware-supabase";
+import { hybridAuth } from "./auth-hybrid";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Register auth routes (no authentication required)
   registerAuthRoutes(app);
   
-  // All routes below require authentication
+  // All routes below use hybrid authentication (supports both old JWT and Supabase)
   // Portfolio routes
-  app.get("/api/portfolios/:userId", optionalAuth, async (req, res) => {
+  app.get("/api/portfolios/:userId", hybridAuth, async (req, res) => {
     try {
       const userId = parseInt(req.params.userId);
       const portfolios = await storage.getPortfolios(userId);
@@ -26,7 +28,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/portfolio/:id", optionalAuth, async (req, res) => {
+  app.get("/api/portfolio/:id", hybridAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const portfolio = await storage.getPortfolio(id);
@@ -40,7 +42,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Stock holdings routes
-  app.get("/api/portfolio/:id/stocks", optionalAuth, async (req, res) => {
+  app.get("/api/portfolio/:id/stocks", hybridAuth, async (req, res) => {
     try {
       const portfolioId = parseInt(req.params.id);
       const holdings = await storage.getStockHoldings(portfolioId);
@@ -50,7 +52,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/portfolio/:id/stocks", optionalAuth, async (req, res) => {
+  app.post("/api/portfolio/:id/stocks", hybridAuth, async (req, res) => {
     try {
       const portfolioId = parseInt(req.params.id);
       const validatedData = insertStockHoldingSchema.parse({
@@ -67,7 +69,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/stocks/:id", optionalAuth, async (req, res) => {
+  app.put("/api/stocks/:id", hybridAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const holding = await storage.updateStockHolding(id, req.body);
@@ -80,7 +82,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/stocks/:id", optionalAuth, async (req, res) => {
+  app.delete("/api/stocks/:id", hybridAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const deleted = await storage.deleteStockHolding(id);
@@ -94,7 +96,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Stock quote route
-  app.get("/api/stock/quote/:symbol", optionalAuth, async (req, res) => {
+  app.get("/api/stock/quote/:symbol", hybridAuth, async (req, res) => {
     try {
       const symbol = req.params.symbol.toUpperCase();
       const provider = getMarketDataProvider();
@@ -106,7 +108,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Option holdings routes
-  app.get("/api/portfolio/:id/options", optionalAuth, async (req, res) => {
+  app.get("/api/portfolio/:id/options", hybridAuth, async (req, res) => {
     try {
       const portfolioId = parseInt(req.params.id);
       const holdings = await storage.getOptionHoldings(portfolioId);
@@ -116,7 +118,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/portfolio/:id/options", optionalAuth, async (req, res) => {
+  app.post("/api/portfolio/:id/options", hybridAuth, async (req, res) => {
     try {
       const portfolioId = parseInt(req.params.id);
       const validatedData = insertOptionHoldingSchema.parse({
@@ -133,7 +135,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/options/:id", optionalAuth, async (req, res) => {
+  app.put("/api/options/:id", hybridAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const holding = await storage.updateOptionHolding(id, req.body);
@@ -146,7 +148,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/options/:id", optionalAuth, async (req, res) => {
+  app.delete("/api/options/:id", hybridAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const deleted = await storage.deleteOptionHolding(id);
@@ -160,7 +162,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Risk calculation routes
-  app.get("/api/portfolio/:id/risk", optionalAuth, async (req, res) => {
+  app.get("/api/portfolio/:id/risk", hybridAuth, async (req, res) => {
     try {
       const portfolioId = parseInt(req.params.id);
       
@@ -250,7 +252,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Risk settings routes
-  app.get("/api/user/:userId/risk-settings", optionalAuth, async (req, res) => {
+  app.get("/api/user/:userId/risk-settings", hybridAuth, async (req, res) => {
     try {
       const userId = parseInt(req.params.userId);
       const settings = await storage.getRiskSettings(userId);
@@ -260,7 +262,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/user/:userId/risk-settings", optionalAuth, async (req, res) => {
+  app.put("/api/user/:userId/risk-settings", hybridAuth, async (req, res) => {
     try {
       const userId = parseInt(req.params.userId);
       const validatedData = insertRiskSettingsSchema.parse({
@@ -278,7 +280,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Smart suggestions route
-  app.get("/api/portfolio/:id/suggestions", optionalAuth, async (req, res) => {
+  app.get("/api/portfolio/:id/suggestions", hybridAuth, async (req, res) => {
     try {
       const portfolioId = parseInt(req.params.id);
       
@@ -372,7 +374,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // CSV Import for stocks
-  app.post("/api/portfolio/:id/stocks/import", optionalAuth, async (req, res) => {
+  app.post("/api/portfolio/:id/stocks/import", hybridAuth, async (req, res) => {
     const portfolioId = parseInt(req.params.id);
     const { csvData } = req.body;
     
@@ -438,7 +440,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // CSV Import for options
-  app.post("/api/portfolio/:id/options/import", optionalAuth, async (req, res) => {
+  app.post("/api/portfolio/:id/options/import", hybridAuth, async (req, res) => {
     const portfolioId = parseInt(req.params.id);
     const { csvData } = req.body;
     
@@ -508,7 +510,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Market data refresh endpoint
-  app.post("/api/portfolio/:id/refresh-prices", optionalAuth, async (req, res) => {
+  app.post("/api/portfolio/:id/refresh-prices", hybridAuth, async (req, res) => {
     const portfolioId = parseInt(req.params.id);
     
     try {
