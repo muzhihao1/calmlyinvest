@@ -1,4 +1,4 @@
-import type { Portfolio, StockHolding, OptionHolding, RiskSettings } from "@shared/schema-supabase";
+import type { Portfolio, StockHolding, OptionHolding, RiskSettings } from "@shared/schema-types";
 
 export const DEMO_PORTFOLIO: Portfolio = {
   id: "demo-portfolio-1",
@@ -7,8 +7,8 @@ export const DEMO_PORTFOLIO: Portfolio = {
   totalEquity: "1000000.00",
   cashBalance: "200000.00",
   marginUsed: "0.00",
-  createdAt: new Date(),
-  updatedAt: new Date(),
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
 };
 
 export const DEMO_STOCK_HOLDINGS: StockHolding[] = [
@@ -21,8 +21,8 @@ export const DEMO_STOCK_HOLDINGS: StockHolding[] = [
     costPrice: "12.50",
     currentPrice: "13.20",
     beta: "1.15",
-    createdAt: new Date(),
-    updatedAt: new Date(),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
   },
   {
     id: "demo-stock-2",
@@ -33,8 +33,8 @@ export const DEMO_STOCK_HOLDINGS: StockHolding[] = [
     costPrice: "38.00",
     currentPrice: "36.50",
     beta: "0.95",
-    createdAt: new Date(),
-    updatedAt: new Date(),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
   },
   {
     id: "demo-stock-3",
@@ -45,8 +45,8 @@ export const DEMO_STOCK_HOLDINGS: StockHolding[] = [
     costPrice: "15.20",
     currentPrice: "16.80",
     beta: "1.25",
-    createdAt: new Date(),
-    updatedAt: new Date(),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
   },
 ];
 
@@ -60,12 +60,12 @@ export const DEMO_OPTION_HOLDINGS: OptionHolding[] = [
     direction: "SELL",
     contracts: 5,
     strikePrice: "4.50",
-    expirationDate: new Date("2024-03-27"),
+    expirationDate: new Date("2024-03-27").toISOString(),
     costPrice: "0.1200",
     currentPrice: "0.0800",
     deltaValue: "-0.3500",
-    createdAt: new Date(),
-    updatedAt: new Date(),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
   },
   {
     id: "demo-option-2",
@@ -76,12 +76,12 @@ export const DEMO_OPTION_HOLDINGS: OptionHolding[] = [
     direction: "BUY",
     contracts: 10,
     strikePrice: "4.20",
-    expirationDate: new Date("2024-04-24"),
+    expirationDate: new Date("2024-04-24").toISOString(),
     costPrice: "0.0500",
     currentPrice: "0.0650",
     deltaValue: "-0.2500",
-    createdAt: new Date(),
-    updatedAt: new Date(),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
   },
 ];
 
@@ -97,8 +97,8 @@ export const DEMO_RISK_SETTINGS: RiskSettings = {
   expirationAlerts: true,
   volatilityAlerts: false,
   dataUpdateFrequency: 5,
-  createdAt: new Date(),
-  updatedAt: new Date(),
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
 };
 
 export const DEMO_RISK_METRICS = {

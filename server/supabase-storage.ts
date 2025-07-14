@@ -13,6 +13,21 @@ export class SupabaseStorage {
     });
   }
 
+  // Helper function to map snake_case to camelCase for portfolios
+  private mapPortfolio(data: any): schema.Portfolio | null {
+    if (!data) return null;
+    return {
+      id: data.id,
+      userId: data.user_id || data.userId,
+      name: data.name,
+      totalEquity: data.total_equity || data.totalEquity,
+      cashBalance: data.cash_balance || data.cashBalance,
+      marginUsed: data.margin_used || data.marginUsed,
+      createdAt: data.created_at || data.createdAt,
+      updatedAt: data.updated_at || data.updatedAt
+    };
+  }
+
   // Portfolio operations
   async getPortfolios(userId: string): Promise<schema.Portfolio[]> {
     const { data, error } = await this.supabase
@@ -21,7 +36,7 @@ export class SupabaseStorage {
       .eq('user_id', userId);
 
     if (error) throw error;
-    return data || [];
+    return (data || []).map(p => this.mapPortfolio(p)!);
   }
 
   async getPortfolio(id: string): Promise<schema.Portfolio | null> {
@@ -32,7 +47,7 @@ export class SupabaseStorage {
       .single();
 
     if (error && error.code !== 'PGRST116') throw error; // PGRST116 = no rows
-    return data;
+    return this.mapPortfolio(data);
   }
 
   async createPortfolio(portfolio: schema.InsertPortfolio): Promise<schema.Portfolio> {

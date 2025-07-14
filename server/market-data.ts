@@ -1,4 +1,4 @@
-import type { StockHolding, OptionHolding } from "@shared/schema";
+import type { StockHolding, OptionHolding } from "@shared/schema-types";
 import yahooFinance from "yahoo-finance2";
 
 interface MarketDataProvider {
@@ -343,4 +343,37 @@ export async function updateOptionPrices(holdings: OptionHolding[]): Promise<Opt
   );
   
   return updatedHoldings;
+}
+
+// Get market quotes for multiple symbols
+export async function getMarketQuotes(symbols: string[]): Promise<StockQuote[]> {
+  const provider = getMarketDataProvider();
+  
+  if (provider.getBatchStockQuotes) {
+    const quotesMap = await provider.getBatchStockQuotes(symbols);
+    return Array.from(quotesMap.values());
+  } else {
+    // Fallback for mock provider
+    const quotes: StockQuote[] = [];
+    for (const symbol of symbols) {
+      try {
+        const quote = await provider.getStockQuote(symbol);
+        quotes.push(quote);
+      } catch (error) {
+        console.error(`Failed to fetch quote for ${symbol}:`, error);
+      }
+    }
+    return quotes;
+  }
+}
+
+// Search for stocks by query
+export async function searchStocks(query: string): Promise<any[]> {
+  try {
+    const results = await yahooFinance.search(query);
+    return results.quotes || [];
+  } catch (error) {
+    console.error('Stock search failed:', error);
+    return [];
+  }
 }

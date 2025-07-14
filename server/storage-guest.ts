@@ -9,7 +9,7 @@ import type {
   InsertStockHolding,
   InsertOptionHolding,
   InsertRiskSettings
-} from "@shared/schema-supabase";
+} from "@shared/schema-types";
 
 // Demo data for guest users
 const DEMO_PORTFOLIO: Portfolio = {
@@ -19,11 +19,12 @@ const DEMO_PORTFOLIO: Portfolio = {
   totalEquity: "1000000.00",
   cashBalance: "200000.00",
   marginUsed: "0.00",
-  createdAt: new Date(),
-  updatedAt: new Date(),
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
 };
 
-const DEMO_STOCK_HOLDINGS: StockHolding[] = [
+// Using let to allow modifications for guest users
+let DEMO_STOCK_HOLDINGS: StockHolding[] = [
   {
     id: "demo-stock-1",
     portfolioId: "demo-portfolio-1",
@@ -33,8 +34,8 @@ const DEMO_STOCK_HOLDINGS: StockHolding[] = [
     costPrice: "12.50",
     currentPrice: "13.20",
     beta: "1.15",
-    createdAt: new Date(),
-    updatedAt: new Date(),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
   },
   {
     id: "demo-stock-2",
@@ -45,8 +46,8 @@ const DEMO_STOCK_HOLDINGS: StockHolding[] = [
     costPrice: "38.00",
     currentPrice: "36.50",
     beta: "0.95",
-    createdAt: new Date(),
-    updatedAt: new Date(),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
   },
   {
     id: "demo-stock-3",
@@ -57,12 +58,13 @@ const DEMO_STOCK_HOLDINGS: StockHolding[] = [
     costPrice: "15.20",
     currentPrice: "16.80",
     beta: "1.25",
-    createdAt: new Date(),
-    updatedAt: new Date(),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
   },
 ];
 
-const DEMO_OPTION_HOLDINGS: OptionHolding[] = [
+// Using let to allow modifications for guest users
+let DEMO_OPTION_HOLDINGS: OptionHolding[] = [
   {
     id: "demo-option-1",
     portfolioId: "demo-portfolio-1",
@@ -72,12 +74,12 @@ const DEMO_OPTION_HOLDINGS: OptionHolding[] = [
     direction: "SELL",
     contracts: 5,
     strikePrice: "4.50",
-    expirationDate: new Date("2024-03-27"),
+    expirationDate: new Date("2024-03-27").toISOString(),
     costPrice: "0.1200",
     currentPrice: "0.0800",
     deltaValue: "-0.3500",
-    createdAt: new Date(),
-    updatedAt: new Date(),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
   },
   {
     id: "demo-option-2",
@@ -88,12 +90,12 @@ const DEMO_OPTION_HOLDINGS: OptionHolding[] = [
     direction: "BUY",
     contracts: 10,
     strikePrice: "4.20",
-    expirationDate: new Date("2024-04-24"),
+    expirationDate: new Date("2024-04-24").toISOString(),
     costPrice: "0.0500",
     currentPrice: "0.0650",
     deltaValue: "-0.2500",
-    createdAt: new Date(),
-    updatedAt: new Date(),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
   },
 ];
 
@@ -109,8 +111,8 @@ const DEMO_RISK_SETTINGS: RiskSettings = {
   expirationAlerts: true,
   volatilityAlerts: false,
   dataUpdateFrequency: 5,
-  createdAt: new Date(),
-  updatedAt: new Date(),
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
 };
 
 export const guestStorage = {
@@ -141,7 +143,22 @@ export const guestStorage = {
   },
 
   async createStockHolding(data: InsertStockHolding): Promise<StockHolding> {
-    throw new Error("Guest users cannot create stock holdings");
+    // Allow guest users to create stock holdings in memory
+    const newHolding: StockHolding = {
+      id: `demo-stock-${Date.now()}`,
+      portfolioId: data.portfolioId,
+      symbol: data.symbol,
+      name: data.name || data.symbol,
+      quantity: data.quantity,
+      costPrice: data.costPrice,
+      currentPrice: data.currentPrice || data.costPrice,
+      beta: data.beta || "1.0",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    
+    DEMO_STOCK_HOLDINGS.push(newHolding);
+    return newHolding;
   },
 
   async updateStockHolding(id: string, data: Partial<StockHolding>): Promise<StockHolding> {
@@ -154,7 +171,13 @@ export const guestStorage = {
   },
 
   async deleteStockHolding(id: string): Promise<void> {
-    throw new Error("Guest users cannot delete stock holdings");
+    // Allow guest users to delete stock holdings from memory
+    const index = DEMO_STOCK_HOLDINGS.findIndex(h => h.id === id);
+    if (index !== -1) {
+      DEMO_STOCK_HOLDINGS.splice(index, 1);
+      return;
+    }
+    throw new Error("Stock holding not found");
   },
 
   // Option holdings methods
@@ -163,7 +186,26 @@ export const guestStorage = {
   },
 
   async createOptionHolding(data: InsertOptionHolding): Promise<OptionHolding> {
-    throw new Error("Guest users cannot create option holdings");
+    // Allow guest users to create option holdings in memory
+    const newHolding: OptionHolding = {
+      id: `demo-option-${Date.now()}`,
+      portfolioId: data.portfolioId,
+      optionSymbol: data.optionSymbol,
+      underlyingSymbol: data.underlyingSymbol,
+      optionType: data.optionType,
+      direction: data.direction,
+      contracts: data.contracts,
+      strikePrice: data.strikePrice,
+      expirationDate: data.expirationDate,
+      costPrice: data.costPrice,
+      currentPrice: data.currentPrice || data.costPrice,
+      deltaValue: data.deltaValue || "0",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    
+    DEMO_OPTION_HOLDINGS.push(newHolding);
+    return newHolding;
   },
 
   async updateOptionHolding(id: string, data: Partial<OptionHolding>): Promise<OptionHolding> {
@@ -176,7 +218,13 @@ export const guestStorage = {
   },
 
   async deleteOptionHolding(id: string): Promise<void> {
-    throw new Error("Guest users cannot delete option holdings");
+    // Allow guest users to delete option holdings from memory
+    const index = DEMO_OPTION_HOLDINGS.findIndex(h => h.id === id);
+    if (index !== -1) {
+      DEMO_OPTION_HOLDINGS.splice(index, 1);
+      return;
+    }
+    throw new Error("Option holding not found");
   },
 
   // Risk settings methods
@@ -199,7 +247,7 @@ export const guestStorage = {
       maxConcentration: data.maxConcentration,
       marginUsageRatio: data.marginUsageRatio,
       riskLevel: data.riskLevel,
-      calculatedAt: new Date(),
+      calculatedAt: new Date().toISOString(),
     };
   },
 

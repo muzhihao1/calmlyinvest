@@ -34,6 +34,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [isGuest, setIsGuest] = useState(false);
   const [location, setLocation] = useLocation();
+  
+  // Check if we should force guest mode (e.g., when explicitly logged out)
+  const forceGuestMode = false;
 
   useEffect(() => {
     // Check for guest mode from URL
@@ -47,12 +50,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
+    supabase.auth.getSession().then(async ({ data: { session }, error }) => {
+      if (error) {
+        console.error('Error getting session:', error);
+        // On error, enter guest mode
+        setIsGuest(true);
+        setUser(GUEST_USER);
+        setSession(null);
+        setLoading(false);
+        return;
+      }
+      
+      // Verify session is still valid if it exists
       if (session?.user) {
-        setUser(session.user);
-        setIsGuest(false);
+        try {
+          // Test if the session is actually valid by making a simple API call
+          const { data: testUser, error: testError } = await supabase.auth.getUser();
+          if (testError || !testUser?.user) {
+            throw new Error('Session invalid');
+          }
+          setSession(session);
+          setUser(session.user);
+          setIsGuest(false);
+        } catch (err) {
+          console.error('Session validation failed:', err);
+          // Session is invalid, clear it and enter guest mode
+          await supabase.auth.signOut();
+          setIsGuest(true);
+          setUser(GUEST_USER);
+          setSession(null);
+        }
       } else {
         // No authenticated user, automatically enter guest mode
         setIsGuest(true);
@@ -95,10 +124,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     await supabaseSignOut();
-    setIsGuest(false);
     
-    // Redirect to login page after logout
-    setLocation('/login');
+    // Enter guest mode immediately
+    setIsGuest(true);
+    setUser(GUEST_USER);
+    setSession(null);
+    
+    // Stay on dashboard
+    setLocation('/');
   };
 
   const enterGuestMode = () => {

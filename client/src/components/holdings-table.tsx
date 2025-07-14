@@ -14,11 +14,11 @@ import { Edit, Trash2, FileUp, Download, ArrowUpDown, ArrowUp, ArrowDown } from 
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { EditHoldingDialog } from "./edit-holding-dialog";
-import type { StockHolding } from "@shared/schema";
+import type { StockHolding } from "@shared/schema-types";
 
 interface HoldingsTableProps {
   holdings: StockHolding[];
-  portfolioId: number;
+  portfolioId: string;
 }
 
 type SortColumn = 'symbol' | 'quantity' | 'costPrice' | 'currentPrice' | 'beta' | 'marketValue' | 'pnl' | 'concentration';
@@ -33,7 +33,7 @@ export function HoldingsTable({ holdings, portfolioId }: HoldingsTableProps) {
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
   const deleteMutation = useMutation({
-    mutationFn: async (id: number) => {
+    mutationFn: async (id: string) => {
       await apiRequest("DELETE", `/api/stocks/${id}`);
     },
     onSuccess: () => {

@@ -16,35 +16,32 @@
 
 - **前端**：React 18 + TypeScript + Tailwind CSS + Radix UI
 - **后端**：Express.js + TypeScript
-- **数据库**：PostgreSQL (Supabase)
-- **部署**：Vercel
-- **其他**：Yahoo Finance API, JWT 认证
+- **数据库**：PostgreSQL (Supabase) 或本地 JSON 存储
+- **部署**：Vercel / Docker / 自托管
+- **其他**：Yahoo Finance API, JWT 认证, TanStack Query
 
 ## 部署指南
 
 ### 1. 准备工作
 
 1. Fork 或克隆本仓库
-2. 注册 [Vercel](https://vercel.com) 账号
-3. 注册 [Supabase](https://supabase.com) 账号
+2. 注册 [Supabase](https://supabase.com) 账号
+3. (可选) 注册 [Vercel](https://vercel.com) 账号用于部署
 
 ### 2. 设置 Supabase 数据库
 
 1. 在 Supabase 创建新项目
-2. 在 SQL 编辑器中运行 `migrations/001_initial_schema.sql`
-3. （可选）运行 `migrations/002_demo_data.sql` 创建演示数据
-4. 复制数据库连接字符串
+2. 在 SQL 编辑器中运行 `migrations/001_supabase_schema.sql`
+3. 运行 `fix-supabase-auth-simple.sql` 设置认证和 RLS
+4. 保存项目 URL 和 API 密钥
 
 ### 3. 配置环境变量
 
-在 Vercel 项目设置中添加以下环境变量：
+创建 `.env` 文件：
 
 ```bash
-DATABASE_URL=your_supabase_connection_string
-JWT_SECRET=your_jwt_secret_key
-NODE_ENV=production
-USE_MOCK_DATA=false
-APP_URL=https://your-app.vercel.app
+SUPABASE_URL=你的Supabase项目URL
+SUPABASE_ANON_KEY=你的Supabase匿名密钥
 ```
 
 ### 4. 部署到 Vercel
@@ -77,7 +74,7 @@ cp .env.example .env
 npm run dev
 ```
 
-访问 http://localhost:3001
+访问 http://localhost:3000
 
 ## 项目结构
 
@@ -104,21 +101,21 @@ calmlyinvest/
 
 ### 访客模式 vs 登录模式
 
-**访客模式（默认）**
+**访客模式**
 - 无需注册或登录，立即使用
-- 数据保存在服务器内存中（开发环境）
+- 数据保存在服务器内存中（不持久化）
 - 刷新页面后数据可能丢失
 - 适合快速体验和测试
 
 **登录模式**
 - 需要注册账号并登录
-- 数据持久化保存在数据库
+- 数据持久化保存在 Supabase 数据库
 - 支持多设备访问
 - 适合长期使用
 
 ### 演示账号
 
-- 用户名：demo
+- 邮箱：demo@example.com
 - 密码：demo123
 
 ### 主要功能

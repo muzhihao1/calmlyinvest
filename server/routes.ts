@@ -144,10 +144,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "Unauthorized" });
       }
       
-      const validatedData = insertStockHoldingSchema.parse({
-        ...req.body,
-        portfolioId: req.params.id
-      });
+      // For guest mode, skip UUID validation for portfolioId
+      let validatedData;
+      if (req.user?.id === 'guest-user' && req.params.id.startsWith('demo-')) {
+        // Manually validate without UUID check for guest mode
+        validatedData = {
+          portfolioId: req.params.id,
+          symbol: req.body.symbol,
+          name: req.body.name,
+          quantity: parseInt(req.body.quantity),
+          costPrice: req.body.costPrice,
+          currentPrice: req.body.currentPrice,
+          beta: req.body.beta
+        };
+      } else {
+        validatedData = insertStockHoldingSchema.parse({
+          ...req.body,
+          portfolioId: req.params.id
+        });
+      }
+      
       const holding = await storageWrapper.createStockHolding(validatedData, req);
       res.status(201).json(holding);
     } catch (error) {

@@ -18,6 +18,9 @@ export async function apiRequest(
   
   if (session?.access_token) {
     headers["Authorization"] = `Bearer ${session.access_token}`;
+  } else {
+    // Use guest mode if no session
+    headers["Authorization"] = "Bearer guest-mode";
   }
   
   if (data) {
@@ -46,6 +49,9 @@ export const getQueryFn: <T>(options: {
     
     if (session?.access_token) {
       headers["Authorization"] = `Bearer ${session.access_token}`;
+    } else {
+      // Use guest mode if no session
+      headers["Authorization"] = "Bearer guest-mode";
     }
     
     const res = await fetch(queryKey[0] as string, {

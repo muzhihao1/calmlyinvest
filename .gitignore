@@ -15,6 +15,7 @@ server/public/
 .env.local
 .env.production.local
 .env.development.local
+.env.supabase
 
 # IDE
 .vscode/
@@ -49,3 +50,14 @@ vite.config.ts.*
 *.tar.gz
 # Test files with credentials
 register-test.html
+test-auth.html
+test-local-auth.html
+clear-session.html
+
+# Temporary SQL scripts
+check-*.sql
+fix-*.sql
+create-*.sql
+
+# Local data storage
+data/

@@ -36,16 +36,35 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     }
     
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ error: 'No authorization token provided' });
+      // Allow guest mode without token
+      req.user = {
+        id: 'guest-user',
+        email: 'guest@example.com'
+      };
+      return next();
     }
 
     const token = authHeader.split(' ')[1];
+    
+    // Special handling for "guest-mode" token
+    if (token === 'guest-mode') {
+      req.user = {
+        id: 'guest-user',
+        email: 'guest@example.com'
+      };
+      return next();
+    }
     
     // Verify the JWT token with Supabase
     const { data: { user }, error } = await supabase.auth.getUser(token);
     
     if (error || !user) {
-      return res.status(401).json({ error: 'Invalid or expired token' });
+      // Fall back to guest mode on invalid token
+      req.user = {
+        id: 'guest-user',
+        email: 'guest@example.com'
+      };
+      return next();
     }
 
     // Attach user to request
@@ -57,7 +76,12 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     next();
   } catch (error) {
     console.error('Auth middleware error:', error);
-    res.status(500).json({ error: 'Authentication failed' });
+    // Fall back to guest mode on error
+    req.user = {
+      id: 'guest-user',
+      email: 'guest@example.com'
+    };
+    next();
   }
 }
 

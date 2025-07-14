@@ -1,9 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
-import * as jwt from 'jsonwebtoken';
-import { storage } from '../../server/storage';
-
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 
 // Supabase客户端
 const supabaseUrl = process.env.SUPABASE_URL || '';
@@ -38,69 +34,33 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'Email and password required' });
     }
     
-    // 优先使用Supabase认证
-    if (supabaseUrl && supabaseAnonKey) {
-      try {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: loginEmail,
-          password: password,
-        });
-        
-        if (!error && data.user && data.session) {
-          console.log('Supabase login successful for:', loginEmail);
-          
-          return res.status(200).json({
-            token: data.session.access_token,
-            userId: data.user.id,
-            email: data.user.email,
-            user: data.user,
-            session: data.session
-          });
-        }
-      } catch (supabaseError) {
-        console.error('Supabase auth error:', supabaseError);
-      }
+    if (!supabaseUrl || !supabaseAnonKey) {
+      return res.status(500).json({ error: 'Supabase not configured' });
     }
     
-    // 回退到旧的认证方式（为了兼容性）
-    const user = await storage.getUserByUsername(loginEmail);
-    console.log('Fallback auth - User found:', user ? 'Yes' : 'No');
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: loginEmail,
+      password: password,
+    });
     
-    if (!user) {
+    if (error) {
+      console.error('Supabase auth error:', error);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
     
-    // 特殊处理您的账号
-    if (loginEmail === "279838958@qq.com" && password === "muzhihao12") {
-      const token = jwt.sign(
-        { userId: user.id, username: user.username },
-        JWT_SECRET,
-        { expiresIn: '7d' }
-      );
-      
-      return res.status(200).json({
-        token,
-        userId: user.id,
-        username: user.username
-      });
+    if (!data.user || !data.session) {
+      return res.status(401).json({ error: 'Invalid credentials' });
     }
     
-    // 其他账号直接比较密码
-    if (user.password === password) {
-      const token = jwt.sign(
-        { userId: user.id, username: user.username },
-        JWT_SECRET,
-        { expiresIn: '7d' }
-      );
-      
-      return res.status(200).json({
-        token,
-        userId: user.id,
-        username: user.username
-      });
-    }
+    console.log('Supabase login successful for:', loginEmail);
     
-    return res.status(401).json({ error: 'Invalid credentials' });
+    return res.status(200).json({
+      token: data.session.access_token,
+      userId: data.user.id,
+      email: data.user.email,
+      user: data.user,
+      session: data.session
+    });
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ 

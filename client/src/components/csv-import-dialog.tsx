@@ -23,7 +23,7 @@ type CsvImportForm = z.infer<typeof csvImportSchema>;
 interface CsvImportDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  portfolioId: number;
+  portfolioId: string;
 }
 
 const stockCsvTemplate = `symbol,name,quantity,costPrice,currentPrice,beta

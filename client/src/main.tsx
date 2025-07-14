@@ -1,6 +1,6 @@
 import { createRoot } from "react-dom/client";
-import App from "./App";
 import "./index.css";
+import App from "./App";
 
 // Import portfolio updater for user 279838958@qq.com
 import "./utils/portfolio-updater";

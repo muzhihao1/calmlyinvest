@@ -35,10 +35,10 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { insertStockHoldingSchema, insertOptionHoldingSchema } from "@shared/schema";
+import { insertStockHoldingSchema, insertOptionHoldingSchema } from "@shared/schema-types";
 
 const stockFormSchema = z.object({
-  portfolioId: z.number(),
+  portfolioId: z.union([z.string(), z.number()]),
   symbol: z.string().min(1, "股票代码不能为空").toUpperCase(),
   name: z.string().optional(),
   quantity: z.coerce.number().min(1, "持仓数量必须大于0"),
@@ -48,7 +48,7 @@ const stockFormSchema = z.object({
 });
 
 const optionFormSchema = z.object({
-  portfolioId: z.number(),
+  portfolioId: z.union([z.string(), z.number()]),
   optionSymbol: z.string().min(1, "期权代码不能为空"),
   underlyingSymbol: z.string().min(1, "标的股票不能为空").toUpperCase(),
   optionType: z.enum(["CALL", "PUT"], { required_error: "请选择期权类型" }),
@@ -65,14 +65,19 @@ interface AddHoldingDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   type: "stock" | "option";
-  portfolioId: number;
+  portfolioId: string | number | null;
 }
 
 export function AddHoldingDialog({ open, onOpenChange, type, portfolioId }: AddHoldingDialogProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   
-  console.log("AddHoldingDialog rendered, open:", open, "type:", type);
+  console.log("AddHoldingDialog rendered, open:", open, "type:", type, "portfolioId:", portfolioId);
+  
+  // Don't render if no portfolioId
+  if (!portfolioId) {
+    return null;
+  }
 
   const stockForm = useForm<z.infer<typeof stockFormSchema>>({
     resolver: zodResolver(stockFormSchema),

@@ -14,11 +14,11 @@ import { Edit, Trash2, Clock } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { EditOptionDialog } from "./edit-option-dialog";
-import type { OptionHolding } from "@shared/schema";
+import type { OptionHolding } from "@shared/schema-types";
 
 interface OptionsTableProps {
   holdings: OptionHolding[];
-  portfolioId: number;
+  portfolioId: string;
 }
 
 export function OptionsTable({ holdings, portfolioId }: OptionsTableProps) {
@@ -28,7 +28,7 @@ export function OptionsTable({ holdings, portfolioId }: OptionsTableProps) {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
 
   const deleteMutation = useMutation({
-    mutationFn: async (id: number) => {
+    mutationFn: async (id: string) => {
       await apiRequest("DELETE", `/api/options/${id}`);
     },
     onSuccess: () => {

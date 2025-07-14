@@ -39,7 +39,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { OptionHolding } from "@shared/schema";
+import type { OptionHolding } from "@shared/schema-types";
 
 const editOptionFormSchema = z.object({
   underlyingSymbol: z.string().min(1, "标的股票不能为空").toUpperCase(),
@@ -62,7 +62,7 @@ interface EditOptionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   option: OptionHolding | null;
-  portfolioId: number;
+  portfolioId: string;
 }
 
 export function EditOptionDialog({ open, onOpenChange, option, portfolioId }: EditOptionDialogProps) {

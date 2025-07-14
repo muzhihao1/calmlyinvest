@@ -17,7 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient-supabase";
 import { useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/auth-context";
-import type { Portfolio, StockHolding, OptionHolding, RiskSettings } from "@shared/schema";
+import type { Portfolio, StockHolding, OptionHolding, RiskSettings } from "@shared/schema-types";
 import type { Suggestion } from "@/components/smart-suggestions";
 
 export default function Dashboard() {
@@ -32,11 +32,36 @@ export default function Dashboard() {
   const userId = user?.id || "guest-user";
   const isLoggedIn = !isGuest && !!user;
   
+  // Mutation to create default portfolio
+  const createPortfolioMutation = useMutation({
+    mutationFn: async () => {
+      const defaultPortfolio = {
+        name: isGuest ? "访客演示组合" : "我的投资组合",
+        totalEquity: "1000000",
+        totalCash: "300000",
+        marginUsed: "0",
+        userId
+      };
+      const response = await apiRequest("POST", "/api/portfolios", defaultPortfolio);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/portfolios/${userId}`] });
+    }
+  });
+
   // Fetch user's portfolios
-  const { data: portfolios = [] } = useQuery<Portfolio[]>({
+  const { data: portfolios = [], isLoading: portfoliosLoading } = useQuery<Portfolio[]>({
     queryKey: [`/api/portfolios/${userId}`],
     enabled: !!userId,
   });
+  
+  // Create default portfolio if none exists
+  useEffect(() => {
+    if (!portfoliosLoading && portfolios.length === 0 && userId) {
+      createPortfolioMutation.mutate();
+    }
+  }, [portfoliosLoading, portfolios, userId]);
   
   // Use the first portfolio or null (don't default to 1 for UUID-based system)
   const portfolioId = portfolios[0]?.id || null;
@@ -368,18 +393,37 @@ export default function Dashboard() {
             <div className="flex flex-wrap gap-3 mb-6">
               <Button 
                 onClick={() => { 
+                  if (!portfolioId) {
+                    toast({
+                      title: "请稍候",
+                      description: "正在创建投资组合...",
+                    });
+                    return;
+                  }
                   console.log("添加股票按钮被点击");
                   setAddDialogType("stock"); 
                   setAddDialogOpen(true); 
                 }}
                 className="bg-primary hover:bg-blue-600"
+                disabled={!portfolioId || createPortfolioMutation.isPending}
               >
                 <ChartLine className="mr-2 h-4 w-4" />
                 添加股票持仓
               </Button>
               <Button 
-                onClick={() => { setAddDialogType("option"); setAddDialogOpen(true); }}
+                onClick={() => { 
+                  if (!portfolioId) {
+                    toast({
+                      title: "请稍候",
+                      description: "正在创建投资组合...",
+                    });
+                    return;
+                  }
+                  setAddDialogType("option"); 
+                  setAddDialogOpen(true); 
+                }}
                 className="bg-primary hover:bg-blue-600"
+                disabled={!portfolioId || createPortfolioMutation.isPending}
               >
                 <Settings className="mr-2 h-4 w-4" />
                 添加期权持仓
@@ -387,6 +431,7 @@ export default function Dashboard() {
               <Button 
                 variant="secondary"
                 onClick={() => setCsvImportOpen(true)}
+                disabled={!portfolioId || createPortfolioMutation.isPending}
               >
                 <Upload className="mr-2 h-4 w-4" />
                 导入CSV
@@ -394,6 +439,7 @@ export default function Dashboard() {
               <Button 
                 variant="secondary"
                 onClick={() => handleExportData()}
+                disabled={!stockHoldings?.length && !optionHoldings?.length}
               >
                 <Download className="mr-2 h-4 w-4" />
                 导出数据
@@ -401,8 +447,8 @@ export default function Dashboard() {
             </div>
 
             {/* Holdings Tables */}
-            <HoldingsTable holdings={stockHoldings || []} portfolioId={portfolioId} />
-            <OptionsTable holdings={optionHoldings || []} portfolioId={portfolioId} />
+            <HoldingsTable holdings={stockHoldings || []} portfolioId={portfolioId || ''} />
+            <OptionsTable holdings={optionHoldings || []} portfolioId={portfolioId || ''} />
           </TabsContent>
 
           <TabsContent value="charts">
@@ -431,7 +477,7 @@ export default function Dashboard() {
 
           <TabsContent value="settings">
             <SettingsPanel 
-              userId={typeof userId === 'string' ? parseInt(userId) || 1 : userId}
+              userId={userId || ''}
               currentSettings={riskSettings}
             />
           </TabsContent>
@@ -442,13 +488,13 @@ export default function Dashboard() {
         open={addDialogOpen}
         onOpenChange={setAddDialogOpen}
         type={addDialogType}
-        portfolioId={portfolioId}
+        portfolioId={portfolioId || ''}
       />
       
       <CsvImportDialog
         open={csvImportOpen}
         onOpenChange={setCsvImportOpen}
-        portfolioId={portfolioId}
+        portfolioId={portfolioId || ''}
       />
     </div>
   );
