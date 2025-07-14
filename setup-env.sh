@@ -1,0 +1,27 @@
+#!/bin/bash
+# 设置持仓助手环境变量
+
+export NODE_ENV=development
+export USE_MOCK_DATA=false
+
+# Supabase 配置
+export SUPABASE_URL=https://hsfthqchyupkbmazcuis.supabase.co
+export SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhzZnRocWNoeXVwa2JtYXpjdWlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIzMzc3OTUsImV4cCI6MjA2NzkxMzc5NX0.Ox6XqMSiVBBnSgvQJHbqoUaLOWuBv4WYGJVHRfPF1bQ
+export SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhzZnRocWNoeXVwa2JtYXpjdWlzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MjMzNzc5NSwiZXhwIjoyMDY3OTEzNzk1fQ.ZbPvIdNH6Fpg9p3NJr_QFxtX
+
+# 数据库连接
+export DATABASE_URL=postgresql://postgres.hsfthqchyupkbmazcuis:sbp_aeb93df390eb119ab40beeafcac4c59c8ac6e3e3@aws-0-us-west-1.pooler.supabase.com:6543/postgres
+
+# JWT密钥
+export JWT_SECRET=your-super-secret-jwt-key-change-in-production-2024
+
+# 服务器配置
+export PORT=3000
+export APP_URL=http://localhost:3000
+
+# 前端环境变量
+export VITE_SUPABASE_URL=https://hsfthqchyupkbmazcuis.supabase.co
+export VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhzZnRocWNoeXVwa2JtYXpjdWlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIzMzc3OTUsImV4cCI6MjA2NzkxMzc5NX0.Ox6XqMSiVBBnSgvQJHbqoUaLOWuBv4WYGJVHRfPF1bQ
+
+echo "✅ 环境变量已设置"
+echo "🚀 启动开发服务器：npm run dev" 

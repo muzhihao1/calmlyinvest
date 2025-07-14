@@ -1,4 +1,4 @@
--- Step 2: Migrate existing data from integer to UUID tables
+-- Step 2: Migrate existing data from integer to UUID tables (FIXED VERSION)
 
 -- First, create a temporary mapping table for portfolio IDs
 CREATE TEMP TABLE portfolio_id_mapping AS
@@ -55,14 +55,37 @@ SELECT
 FROM option_holdings oh
 JOIN portfolio_id_mapping m ON oh.portfolio_id = m.old_id;
 
--- Migrate risk metrics
-INSERT INTO risk_metrics_new (portfolio_id, leverage_ratio, portfolio_beta, max_concentration, margin_usage_ratio, risk_level, calculated_at)
+-- Migrate risk metrics with correct column names
+-- Note: Setting default values for new columns that don't exist in the old table
+INSERT INTO risk_metrics_new (
+    portfolio_id, 
+    leverage_ratio, 
+    portfolio_beta, 
+    max_position_concentration,  -- mapped from max_concentration
+    margin_usage_ratio, 
+    remaining_liquidity,
+    sharpe_ratio,  -- new column, set to default
+    drawdown_current,  -- new column, set to default
+    risk_level, 
+    calculated_at
+)
 SELECT 
     m.new_id as portfolio_id,
     rm.leverage_ratio,
     rm.portfolio_beta,
-    rm.max_concentration,
+    rm.max_concentration as max_position_concentration,  -- column name mapping
     rm.margin_usage_ratio,
+    -- Calculate remaining liquidity from risk_history if available, otherwise use default
+    COALESCE(
+        (SELECT rh.remaining_liquidity 
+         FROM risk_history rh 
+         WHERE rh.portfolio_id = rm.portfolio_id 
+         ORDER BY rh.recorded_at DESC 
+         LIMIT 1), 
+        0
+    ) as remaining_liquidity,
+    0 as sharpe_ratio,  -- Default value for new column
+    0 as drawdown_current,  -- Default value for new column
     rm.risk_level,
     rm.calculated_at
 FROM risk_metrics rm
