@@ -74,15 +74,35 @@ export function LoginPage() {
       await signUp(data.email, data.password);
       toast({
         title: "注册成功",
-        description: "请查看邮箱确认注册",
+        description: "请查看邮箱确认注册（如未收到，可直接尝试登录）",
       });
       // Switch to login tab
       const loginTab = document.querySelector('[value="login"]') as HTMLElement;
       if (loginTab) loginTab.click();
+      
+      // Auto-fill login form
+      loginForm.setValue("email", data.email);
+      loginForm.setValue("password", data.password);
     } catch (error: any) {
+      console.error("Registration error:", error);
+      
+      // Provide helpful guidance for common errors
+      let errorMessage = error.message || "注册过程中出现错误";
+      let description = "";
+      
+      if (error.message?.includes("过于频繁")) {
+        description = "建议使用访客模式体验，或稍后再试";
+      } else if (error.message?.includes("已经注册")) {
+        description = "请切换到登录标签页";
+        // Auto switch to login tab
+        const loginTab = document.querySelector('[value="login"]') as HTMLElement;
+        if (loginTab) loginTab.click();
+        loginForm.setValue("email", data.email);
+      }
+      
       toast({
         title: "注册失败",
-        description: error.message || "注册过程中出现错误",
+        description: errorMessage + (description ? `\n${description}` : ""),
         variant: "destructive",
       });
     } finally {
