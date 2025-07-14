@@ -37,11 +37,22 @@
 
 ### 3. 配置环境变量
 
-创建 `.env` 文件：
+⚠️ **重要安全提示**：
+- **永远不要**将包含真实密钥的 `.env` 文件提交到版本控制
+- 所有 `.env*` 文件都应该在 `.gitignore` 中
+- 使用 `.env.example` 或 `.env.supabase.example` 作为模板
+
+创建 `.env` 文件（从 `.env.example` 复制）：
 
 ```bash
 SUPABASE_URL=你的Supabase项目URL
 SUPABASE_ANON_KEY=你的Supabase匿名密钥
+```
+
+如果需要服务端功能，创建 `.env.supabase` 文件（从 `.env.supabase.example` 复制）：
+
+```bash
+SUPABASE_SERVICE_ROLE_KEY=你的服务角色密钥（保密！）
 ```
 
 ### 4. 部署到 Vercel
@@ -139,6 +150,30 @@ calmlyinvest/
    - 基于风险阈值的实时提醒
    - 持仓调整建议
    - 期权到期管理
+
+## 安全最佳实践
+
+### 环境变量安全
+- **永远不要**提交包含真实密钥的 `.env` 文件
+- 使用 `.env.example` 文件作为模板
+- 定期轮换 API 密钥
+- 在生产环境使用环境变量管理服务
+
+### 密钥管理
+- `SUPABASE_ANON_KEY`：可以在前端使用（公开密钥）
+- `SUPABASE_SERVICE_ROLE_KEY`：**仅限服务端使用**（绝密）
+- 不同环境使用不同的密钥
+
+### Git 安全
+```bash
+# 检查是否有敏感文件未被忽略
+git status --ignored
+
+# 使用 git-secrets 防止意外提交
+brew install git-secrets
+git secrets --install
+git secrets --register-aws
+```
 
 ## 注意事项
 
