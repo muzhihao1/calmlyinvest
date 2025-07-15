@@ -43,11 +43,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Portfolio routes
   app.get("/api/portfolios/:userId", requireAuth, async (req, res) => {
     try {
-      console.log('Portfolios request:', {
-        userId: req.params.userId,
-        authUserId: req.user?.id,
-        isGuest: req.user?.id === 'guest-user'
-      });
       
       // Ensure user can only access their own portfolios
       if (req.user?.id !== req.params.userId) {
@@ -55,7 +50,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const portfolios = await storageWrapper.getPortfolios(req.params.userId, req);
-      console.log('Portfolios response:', portfolios);
       res.json(portfolios);
     } catch (error) {
       console.error('Error fetching portfolios:', error);

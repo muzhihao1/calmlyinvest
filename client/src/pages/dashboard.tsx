@@ -66,14 +66,6 @@ export default function Dashboard() {
   // Use the first portfolio or demo portfolio for guests
   const portfolioId = portfolios[0]?.id || (isGuest ? "demo-portfolio-1" : null);
   
-  // Debug logging
-  console.log('Dashboard state:', {
-    userId,
-    isGuest,
-    portfoliosLoading,
-    portfolios,
-    portfolioId
-  });
 
   const { data: portfolio, isLoading: portfolioLoading } = useQuery<Portfolio>({
     queryKey: [`/api/portfolio/${portfolioId}`],
