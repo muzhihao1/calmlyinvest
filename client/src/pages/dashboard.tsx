@@ -63,8 +63,8 @@ export default function Dashboard() {
     }
   }, [portfoliosLoading, portfolios, userId, isGuest]);
   
-  // Use the first portfolio or null (don't default to 1 for UUID-based system)
-  const portfolioId = portfolios[0]?.id || null;
+  // Use the first portfolio or demo portfolio for guests
+  const portfolioId = portfolios[0]?.id || (isGuest ? "demo-portfolio-1" : null);
   
   // Debug logging
   console.log('Dashboard state:', {
