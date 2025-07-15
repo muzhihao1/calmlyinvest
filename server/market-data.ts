@@ -1,5 +1,23 @@
 import type { StockHolding, OptionHolding } from "@shared/schema-types";
-import yahooFinance from "yahoo-finance2";
+
+// Lazy load yahoo-finance2 to avoid initialization issues
+let yahooFinanceModule: any = null;
+
+async function getYahooFinance() {
+  if (!yahooFinanceModule) {
+    try {
+      yahooFinanceModule = await import("yahoo-finance2");
+      // Some versions export as default.default
+      if (yahooFinanceModule.default) {
+        yahooFinanceModule = yahooFinanceModule.default;
+      }
+    } catch (error) {
+      console.error('Failed to load yahoo-finance2:', error);
+      throw new Error('Yahoo Finance module not available');
+    }
+  }
+  return yahooFinanceModule;
+}
 
 interface MarketDataProvider {
   getStockPrice(symbol: string): Promise<number>;
@@ -118,6 +136,7 @@ class MockMarketDataProvider implements MarketDataProvider {
 class YahooFinanceProvider implements MarketDataProvider {
   async getStockPrice(symbol: string): Promise<number> {
     try {
+      const yahooFinance = await getYahooFinance();
       const quote = await yahooFinance.quote(symbol);
       return quote.regularMarketPrice || quote.ask || quote.bid || 0;
     } catch (error) {
@@ -128,11 +147,13 @@ class YahooFinanceProvider implements MarketDataProvider {
 
   async getStockQuote(symbol: string): Promise<StockQuote> {
     try {
+      const yahooFinance = await getYahooFinance();
       const quote = await yahooFinance.quote(symbol);
       
       // Try to get beta from quoteSummary if not available in quote
       let beta = 1.0;
       try {
+        const yahooFinance = await getYahooFinance();
         const summary = await yahooFinance.quoteSummary(symbol, { modules: ['defaultKeyStatistics'] });
         beta = summary.defaultKeyStatistics?.beta || 1.0;
       } catch (betaError) {
@@ -197,6 +218,7 @@ class YahooFinanceProvider implements MarketDataProvider {
     
     try {
       // Yahoo Finance supports batch quotes
+      const yahooFinance = await getYahooFinance();
       const quotes = await yahooFinance.quote(symbols);
       
       // Handle both single quote and array of quotes
@@ -370,6 +392,7 @@ export async function getMarketQuotes(symbols: string[]): Promise<StockQuote[]> 
 // Search for stocks by query
 export async function searchStocks(query: string): Promise<any[]> {
   try {
+    const yahooFinance = await getYahooFinance();
     const results = await yahooFinance.search(query);
     return results.quotes || [];
   } catch (error) {

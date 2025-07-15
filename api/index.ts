@@ -2,15 +2,27 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import express from 'express';
 import { registerRoutes } from '../server/routes';
 
-// Create Express app instance
-const app = express();
+// Cache the Express app to avoid recreating it on every request
+let app: express.Express | null = null;
 
-// Body parsing middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
-
-// Register all routes
-registerRoutes(app);
+function getApp() {
+  if (!app) {
+    app = express();
+    
+    // Body parsing middleware
+    app.use(express.json());
+    app.use(express.urlencoded({ extended: false }));
+    
+    // Register all routes
+    try {
+      registerRoutes(app);
+    } catch (error) {
+      console.error('Failed to register routes:', error);
+      // Don't throw, let the app handle requests with error responses
+    }
+  }
+  return app;
+}
 
 // Main handler function for Vercel
 export default function handler(req: VercelRequest, res: VercelResponse) {
@@ -29,15 +41,28 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
   // Log the request for debugging
   console.log(`API Request: ${req.method} ${req.url}`);
   
+  // Get the Express app (lazy initialization)
+  const expressApp = getApp();
+  
   // Run the Express app
   return new Promise<void>((resolve, reject) => {
-    app(req as any, res as any, (error: any) => {
+    expressApp(req as any, res as any, (error: any) => {
       if (error) {
         console.error('Express app error:', error);
-        reject(error);
+        res.status(500).json({ 
+          error: 'Internal Server Error', 
+          message: error.message || 'Unknown error'
+        });
+        resolve(); // Resolve instead of reject to avoid Vercel error
       } else {
         resolve();
       }
+    });
+  }).catch((error) => {
+    console.error('Handler error:', error);
+    res.status(500).json({ 
+      error: 'Internal Server Error', 
+      message: error.message || 'Unknown error'
     });
   });
 }
