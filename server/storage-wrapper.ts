@@ -16,8 +16,8 @@ import type {
 
 export class StorageWrapper {
   private getStorage(req: Request) {
-    // Check if this is a guest user
-    if (req.user?.id === 'guest-user') {
+    // Check if this is a guest user or storage is not available
+    if (req.user?.id === 'guest-user' || !storage) {
       return guestStorage;
     }
     return storage as any; // Type assertion to handle the mismatch

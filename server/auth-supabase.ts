@@ -16,11 +16,16 @@ declare global {
 const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables');
-}
+// Create a dummy client for when Supabase is not configured
+const dummySupabase = {
+  auth: {
+    getUser: async () => ({ data: { user: null }, error: null })
+  }
+} as any;
 
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+const supabase = (supabaseUrl && supabaseAnonKey) 
+  ? createClient(supabaseUrl, supabaseAnonKey) 
+  : dummySupabase;
 
 export async function requireAuth(req: Request, res: Response, next: NextFunction) {
   try {

@@ -1,5 +1,4 @@
 import type { Express } from "express";
-import { createServer, type Server } from "http";
 import { storageWrapper } from "./storage-wrapper";
 import { 
   insertPortfolioSchema,
@@ -30,7 +29,7 @@ function isAuthorizedForPortfolio(portfolio: any, userId: string | undefined, po
   return portfolio && portfolio.userId === userId;
 }
 
-export async function registerRoutes(app: Express): Promise<Server> {
+export function registerRoutes(app: Express): void {
   // Health check endpoint
   app.get("/api/health", async (req, res) => {
     try {
@@ -46,6 +45,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         timestamp: new Date().toISOString()
       });
     }
+  });
+  
+  // Debug endpoint (remove in production)
+  app.get("/api/debug/env", async (req, res) => {
+    res.json({
+      hasSupabaseUrl: !!process.env.VITE_SUPABASE_URL,
+      hasSupabaseKey: !!process.env.VITE_SUPABASE_ANON_KEY,
+      hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+      nodeEnv: process.env.NODE_ENV,
+      vercelEnv: process.env.VERCEL_ENV,
+      timestamp: new Date().toISOString()
+    });
   });
   
   // All routes below require authentication
@@ -568,6 +579,4 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  const httpServer = createServer(app);
-  return httpServer;
 }
