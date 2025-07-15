@@ -111,10 +111,12 @@ export function LoginPage() {
   };
 
   const handleDemoLogin = async () => {
-    // Use test account for demo
-    loginForm.setValue("email", "279838958@qq.com");
-    loginForm.setValue("password", "123456");
-    loginForm.handleSubmit(onLogin)();
+    // Demo login removed - users should use guest mode or create their own account
+    toast({
+      title: "提示",
+      description: "请使用访客模式体验，或注册您自己的账号",
+    });
+    handleGuestMode();
   };
 
   const handleGuestMode = () => {
@@ -280,7 +282,7 @@ export function LoginPage() {
             className="w-full text-sm text-gray-400"
             onClick={handleDemoLogin}
           >
-            使用测试账号登录
+            快速体验
           </Button>
         </CardFooter>
       </Card>

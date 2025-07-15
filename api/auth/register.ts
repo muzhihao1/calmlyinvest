@@ -61,12 +61,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     
     console.log('User created successfully:', data.user.id);
     
-    // 如果您的账号，自动导入数据
-    if (email === '279838958@qq.com') {
-      // 数据会通过触发器自动创建
-      console.log('Your account detected, data will be imported via trigger');
-    }
-    
     return res.status(201).json({
       success: true,
       userId: data.user.id,

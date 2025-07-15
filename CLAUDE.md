@@ -113,7 +113,6 @@ The application calculates several key risk metrics:
 ### Authentication Modes
 - **Guest Mode**: Uses memory storage (no persistence)
 - **Authenticated Mode**: Uses Supabase database with RLS
-- **Demo Account**: Username: `demo`, Password: `demo123`
 
 ### API Endpoints Pattern
 All API endpoints follow RESTful conventions:
