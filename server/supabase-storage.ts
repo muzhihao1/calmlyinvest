@@ -51,26 +51,42 @@ export class SupabaseStorage {
   }
 
   async createPortfolio(portfolio: schema.InsertPortfolio): Promise<schema.Portfolio> {
+    // Convert camelCase to snake_case for database
+    const dbPortfolio = {
+      user_id: portfolio.userId,
+      name: portfolio.name,
+      total_equity: portfolio.totalEquity,
+      cash_balance: portfolio.cashBalance,
+      margin_used: portfolio.marginUsed
+    };
+    
     const { data, error } = await this.supabase
       .from('portfolios')
-      .insert(portfolio)
+      .insert(dbPortfolio)
       .select()
       .single();
 
     if (error) throw error;
-    return data;
+    return this.mapPortfolio(data)!;
   }
 
   async updatePortfolio(id: string, updates: Partial<schema.Portfolio>): Promise<schema.Portfolio> {
+    // Convert camelCase to snake_case for database
+    const dbUpdates: any = {};
+    if (updates.name !== undefined) dbUpdates.name = updates.name;
+    if (updates.totalEquity !== undefined) dbUpdates.total_equity = updates.totalEquity;
+    if (updates.cashBalance !== undefined) dbUpdates.cash_balance = updates.cashBalance;
+    if (updates.marginUsed !== undefined) dbUpdates.margin_used = updates.marginUsed;
+    
     const { data, error } = await this.supabase
       .from('portfolios')
-      .update(updates)
+      .update(dbUpdates)
       .eq('id', id)
       .select()
       .single();
 
     if (error) throw error;
-    return data;
+    return this.mapPortfolio(data)!;
   }
 
   async deletePortfolio(id: string): Promise<boolean> {

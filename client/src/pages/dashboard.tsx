@@ -38,7 +38,7 @@ export default function Dashboard() {
       const defaultPortfolio = {
         name: isGuest ? "访客演示组合" : "我的投资组合",
         totalEquity: "1000000",
-        totalCash: "300000",
+        cashBalance: "300000",
         marginUsed: "0",
         userId
       };

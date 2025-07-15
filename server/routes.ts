@@ -84,9 +84,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json(portfolio);
     } catch (error) {
       if (error instanceof z.ZodError) {
+        console.error('Portfolio validation error:', error.errors);
         return res.status(400).json({ error: "Invalid input data", details: error.errors });
       }
-      res.status(500).json({ error: "Failed to create portfolio" });
+      console.error('Failed to create portfolio:', error);
+      res.status(500).json({ error: "Failed to create portfolio", message: error instanceof Error ? error.message : 'Unknown error' });
     }
   });
   
