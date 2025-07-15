@@ -65,6 +65,15 @@ export default function Dashboard() {
   
   // Use the first portfolio or null (don't default to 1 for UUID-based system)
   const portfolioId = portfolios[0]?.id || null;
+  
+  // Debug logging
+  console.log('Dashboard state:', {
+    userId,
+    isGuest,
+    portfoliosLoading,
+    portfolios,
+    portfolioId
+  });
 
   const { data: portfolio, isLoading: portfolioLoading } = useQuery<Portfolio>({
     queryKey: [`/api/portfolio/${portfolioId}`],
