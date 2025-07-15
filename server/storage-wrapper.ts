@@ -18,8 +18,10 @@ export class StorageWrapper {
   private getStorage(req: Request) {
     // Check if this is a guest user
     if (req.user?.id === 'guest-user') {
+      console.log('Using guest storage for user:', req.user?.id);
       return guestStorage;
     }
+    console.log('Using Supabase storage for user:', req.user?.id);
     return storage as any; // Type assertion to handle the mismatch
   }
 

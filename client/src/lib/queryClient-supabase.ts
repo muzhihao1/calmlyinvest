@@ -22,9 +22,14 @@ export async function apiRequest(
   const guestMode = isGuestMode || url.includes('guest-user') || url.includes('demo-portfolio');
   
   if (guestMode) {
+    console.log('Using guest mode for API request:', url);
     headers["Authorization"] = "Bearer guest-mode";
   } else if (session?.access_token) {
     headers["Authorization"] = `Bearer ${session.access_token}`;
+  } else {
+    // No session and not guest mode - default to guest mode
+    console.log('No session, defaulting to guest mode for:', url);
+    headers["Authorization"] = "Bearer guest-mode";
   }
   
   if (data) {
@@ -56,9 +61,14 @@ export const getQueryFn: <T>(options: {
     const isGuestMode = url.includes('guest-user') || url.includes('demo-portfolio');
     
     if (isGuestMode) {
+      console.log('Query using guest mode for:', url);
       headers["Authorization"] = "Bearer guest-mode";
     } else if (session?.access_token) {
       headers["Authorization"] = `Bearer ${session.access_token}`;
+    } else {
+      // No session and not guest mode - default to guest mode
+      console.log('Query: No session, defaulting to guest mode for:', url);
+      headers["Authorization"] = "Bearer guest-mode";
     }
     
     const res = await fetch(url, {
