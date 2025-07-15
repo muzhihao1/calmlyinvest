@@ -20,6 +20,16 @@ export interface Suggestion {
   [key: string]: any;
 }
 
+// Helper function to check portfolio access
+function isAuthorizedForPortfolio(portfolio: any, userId: string | undefined, portfolioId: string): boolean {
+  // Guest users can access demo portfolio
+  if (userId === 'guest-user' && portfolioId === 'demo-portfolio-1') {
+    return true;
+  }
+  // Regular users must own the portfolio
+  return portfolio && portfolio.userId === userId;
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Health check endpoint
   app.get("/api/health", async (req, res) => {
@@ -64,14 +74,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Portfolio not found" });
       }
       
-      // Ensure user owns this portfolio
-      if (portfolio.userId !== req.user?.id) {
+      // Ensure user owns this portfolio or is guest accessing demo
+      if (!isAuthorizedForPortfolio(portfolio, req.user?.id, req.params.id)) {
         return res.status(403).json({ error: "Unauthorized" });
       }
       
       res.json(portfolio);
     } catch (error) {
-      res.status(500).json({ error: "Failed to fetch portfolio" });
+      console.error('Error fetching portfolio:', error);
+      res.status(500).json({ error: "Failed to fetch portfolio", message: error instanceof Error ? error.message : 'Unknown error' });
     }
   });
   
@@ -104,7 +115,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updatedPortfolio = await storageWrapper.updatePortfolio(req.params.id, req.body, req);
       res.json(updatedPortfolio);
     } catch (error) {
-      res.status(500).json({ error: "Failed to update portfolio" });
+      console.error('Error updating portfolio:', error);
+      res.status(500).json({ error: "Failed to update portfolio", message: error instanceof Error ? error.message : 'Unknown error' });
     }
   });
   
@@ -119,7 +131,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storageWrapper.deletePortfolio(req.params.id, req);
       res.status(204).send();
     } catch (error) {
-      res.status(500).json({ error: "Failed to delete portfolio" });
+      console.error('Error deleting portfolio:', error);
+      res.status(500).json({ error: "Failed to delete portfolio", message: error instanceof Error ? error.message : 'Unknown error' });
     }
   });
 
@@ -128,14 +141,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Check portfolio ownership
       const portfolio = await storageWrapper.getPortfolio(req.params.id, req);
-      if (!portfolio || portfolio.userId !== req.user?.id) {
+      if (!isAuthorizedForPortfolio(portfolio, req.user?.id, req.params.id)) {
         return res.status(403).json({ error: "Unauthorized" });
       }
       
       const holdings = await storageWrapper.getStockHoldings(req.params.id, req);
       res.json(holdings);
     } catch (error) {
-      res.status(500).json({ error: "Failed to fetch stock holdings" });
+      console.error('Error fetching stock holdings:', error);
+      res.status(500).json({ error: "Failed to fetch stock holdings", message: error instanceof Error ? error.message : 'Unknown error' });
     }
   });
 
@@ -143,7 +157,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Check portfolio ownership
       const portfolio = await storageWrapper.getPortfolio(req.params.id, req);
-      if (!portfolio || portfolio.userId !== req.user?.id) {
+      if (!isAuthorizedForPortfolio(portfolio, req.user?.id, req.params.id)) {
         return res.status(403).json({ error: "Unauthorized" });
       }
       
@@ -173,7 +187,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: "Invalid input data", details: error.errors });
       }
-      res.status(500).json({ error: "Failed to create stock holding" });
+      console.error('Error creating stock holding:', error);
+      res.status(500).json({ error: "Failed to create stock holding", message: error instanceof Error ? error.message : 'Unknown error' });
     }
   });
 
@@ -203,7 +218,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const quote = await provider.getStockQuote(symbol);
       res.json(quote);
     } catch (error) {
-      res.status(500).json({ error: "Failed to fetch stock quote" });
+      console.error('Stock quote error:', error);
+      res.status(500).json({ error: "Failed to fetch stock quote", message: error instanceof Error ? error.message : 'Unknown error' });
     }
   });
 
@@ -212,14 +228,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Check portfolio ownership
       const portfolio = await storageWrapper.getPortfolio(req.params.id, req);
-      if (!portfolio || portfolio.userId !== req.user?.id) {
+      if (!isAuthorizedForPortfolio(portfolio, req.user?.id, req.params.id)) {
         return res.status(403).json({ error: "Unauthorized" });
       }
       
       const holdings = await storageWrapper.getOptionHoldings(req.params.id, req);
       res.json(holdings);
     } catch (error) {
-      res.status(500).json({ error: "Failed to fetch option holdings" });
+      console.error('Error fetching option holdings:', error);
+      res.status(500).json({ error: "Failed to fetch option holdings", message: error instanceof Error ? error.message : 'Unknown error' });
     }
   });
 
@@ -227,7 +244,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Check portfolio ownership
       const portfolio = await storageWrapper.getPortfolio(req.params.id, req);
-      if (!portfolio || portfolio.userId !== req.user?.id) {
+      if (!isAuthorizedForPortfolio(portfolio, req.user?.id, req.params.id)) {
         return res.status(403).json({ error: "Unauthorized" });
       }
       
@@ -268,7 +285,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Check portfolio ownership
       const portfolio = await storageWrapper.getPortfolio(req.params.id, req);
-      if (!portfolio || portfolio.userId !== req.user?.id) {
+      if (!isAuthorizedForPortfolio(portfolio, req.user?.id, req.params.id)) {
         return res.status(403).json({ error: "Unauthorized" });
       }
       
@@ -382,7 +399,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       res.json(settings);
     } catch (error) {
-      res.status(500).json({ error: "Failed to fetch risk settings" });
+      console.error('Error fetching risk settings:', error);
+      res.status(500).json({ error: "Failed to fetch risk settings", message: error instanceof Error ? error.message : 'Unknown error' });
     }
   });
 
@@ -403,7 +421,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: "Invalid input data", details: error.errors });
       }
-      res.status(500).json({ error: "Failed to update risk settings" });
+      console.error('Error updating risk settings:', error);
+      res.status(500).json({ error: "Failed to update risk settings", message: error instanceof Error ? error.message : 'Unknown error' });
     }
   });
 
@@ -412,7 +431,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Check portfolio ownership
       const portfolio = await storageWrapper.getPortfolio(req.params.id, req);
-      if (!portfolio || portfolio.userId !== req.user?.id) {
+      if (!isAuthorizedForPortfolio(portfolio, req.user?.id, req.params.id)) {
         return res.status(403).json({ error: "Unauthorized" });
       }
       
@@ -504,7 +523,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Check portfolio ownership
       const portfolio = await storageWrapper.getPortfolio(req.params.id, req);
-      if (!portfolio || portfolio.userId !== req.user?.id) {
+      if (!isAuthorizedForPortfolio(portfolio, req.user?.id, req.params.id)) {
         return res.status(403).json({ error: "Unauthorized" });
       }
       
