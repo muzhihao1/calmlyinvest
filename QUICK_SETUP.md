@@ -1,32 +1,67 @@
-# 快速设置指南 (Quick Setup Guide)
+# 快速设置指南
 
-## ✅ 已完成 (Completed)
-- ✅ 更新 server/index.ts 使用新的路由
-- ✅ 复制环境变量到 .env
-- ✅ 删除旧的认证文件
+## 系统已完成的更新
 
-## ⚠️ 需要您手动完成 (Manual Steps Required)
+- ✅ 移除所有硬编码账号信息
+- ✅ 清理用户特定的代码和脚本  
+- ✅ 创建自动初始化脚本
+- ✅ 更新认证流程
+- ✅ 部署到 Vercel
 
-### 1. 获取 Service Role Key
-1. 打开: https://app.supabase.com/project/hsfthqchyupkbmazcuis/settings/api
-2. 找到 "Project API keys" 部分
-3. 复制 `service_role` 密钥（以 `eyJ` 开头的长字符串）
-4. 编辑 `.env` 文件，将 `SUPABASE_SERVICE_ROLE_KEY=your-service-role-key-here` 替换为实际的密钥
+## 立即执行步骤
 
-### 2. 运行数据库迁移
-1. 打开: https://app.supabase.com/project/hsfthqchyupkbmazcuis/sql/new
-2. 复制 `migrations/001_supabase_schema.sql` 文件的全部内容
-3. 粘贴到 SQL 编辑器并运行
+### 1. 在 Supabase SQL Editor 中运行初始化脚本
 
-### 3. 迁移您的数据
-在项目根目录运行:
-```bash
-npx tsx migrations/002_migrate_user_data.ts
+登录到 Supabase Dashboard，在 SQL Editor 中运行：
+
+```sql
+-- 运行 scripts/initialize-new-user.sql 的内容
+-- 这会为新用户自动创建投资组合
 ```
 
-### 4. 测试登录
-- 邮箱: 279838958@qq.com
-- 密码: muzhihao12
+### 2. 配置 Supabase Pro 版本设置
 
-## 完成后
-系统将使用纯 Supabase 认证，您的所有数据都会安全存储在 Supabase 数据库中。
+在 Dashboard 中进行以下设置：
+
+#### Authentication > Providers > Email
+- Rate limit for signups: **10 per hour**
+- Rate limit for password recovery: **5 per hour**
+- Rate limit for magic links: **5 per hour**
+
+#### Authentication > Settings  
+- Enable email confirmations: **Yes** (保持启用)
+- Double confirm email changes: **No**
+- Secure password change: **No**
+- JWT expiry limit: **3600** (1小时)
+
+### 3. （可选）启用其他登录方式
+
+为了减轻邮箱注册压力，可以在 Authentication > Providers 中启用：
+- Google OAuth
+- GitHub OAuth
+
+## 系统现在的工作方式
+
+1. **新用户注册流程**：
+   - 注册 → 邮箱确认 → 自动创建投资组合（100万初始资金）
+   - 自动设置默认风险参数
+
+2. **访客模式**：
+   - 无需注册，数据保存在本地
+   - 适合快速体验
+
+3. **无特殊账号**：
+   - 系统中没有任何硬编码的测试账号
+   - 所有用户平等对待
+
+## 如何测试
+
+1. 访问 https://calmlyinvest.vercel.app
+2. 注册新账号或使用访客模式
+3. 确认所有功能正常工作
+
+## 数据清理（如需要）
+
+如果需要完全清理系统数据，运行 `scripts/clean-and-reset-all.sql`
+
+系统现已准备就绪，可以正常使用！
