@@ -56,12 +56,12 @@ export default function Dashboard() {
     enabled: !!userId,
   });
   
-  // Create default portfolio if none exists
+  // Create default portfolio if none exists (but not for guest users)
   useEffect(() => {
-    if (!portfoliosLoading && portfolios.length === 0 && userId) {
+    if (!portfoliosLoading && portfolios.length === 0 && userId && !isGuest) {
       createPortfolioMutation.mutate();
     }
-  }, [portfoliosLoading, portfolios, userId]);
+  }, [portfoliosLoading, portfolios, userId, isGuest]);
   
   // Use the first portfolio or null (don't default to 1 for UUID-based system)
   const portfolioId = portfolios[0]?.id || null;
