@@ -32,8 +32,6 @@ export default function Dashboard() {
   const userId = user?.id || "guest-user";
   const isLoggedIn = !isGuest && !!user;
   
-  console.log("Dashboard auth state: isGuest =", isGuest, "user =", user, "userId =", userId, "isLoggedIn =", isLoggedIn);
-  
   // Mutation to create default portfolio
   const createPortfolioMutation = useMutation({
     mutationFn: async () => {

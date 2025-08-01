@@ -72,17 +72,14 @@ interface AddHoldingDialogProps {
 export function AddHoldingDialog({ open, onOpenChange, type, portfolioId }: AddHoldingDialogProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const { isGuest, user } = useAuth();
+  const { isGuest } = useAuth();
   
   console.log("AddHoldingDialog rendered, open:", open, "type:", type, "portfolioId:", portfolioId);
-  console.log("AddHoldingDialog auth state: isGuest =", isGuest, "user =", user);
   
   // Helper function to save stock to localStorage for guest mode
   const saveStockToLocalStorage = (stockData: any) => {
-    console.log("saveStockToLocalStorage called with:", stockData);
     try {
       const stored = localStorage.getItem('guest_stocks');
-      console.log("Current localStorage guest_stocks:", stored);
       const allStocks = stored ? JSON.parse(stored) : {};
       
       // Calculate derived values
@@ -105,16 +102,12 @@ export function AddHoldingDialog({ open, onOpenChange, type, portfolioId }: AddH
         updatedAt: new Date().toISOString()
       };
       
-      console.log("New stock object:", newStock);
-      
       if (!allStocks[portfolioId]) {
         allStocks[portfolioId] = [];
       }
       allStocks[portfolioId].push(newStock);
       
-      console.log("Updated allStocks:", allStocks);
       localStorage.setItem('guest_stocks', JSON.stringify(allStocks));
-      console.log("Saved to localStorage successfully");
       return newStock;
     } catch (error) {
       console.error('Error saving stock to localStorage:', error);
@@ -185,8 +178,6 @@ export function AddHoldingDialog({ open, onOpenChange, type, portfolioId }: AddH
 
   const addStockMutation = useMutation({
     mutationFn: async (data: z.infer<typeof stockFormSchema>) => {
-      console.log("addStockMutation: isGuest =", isGuest, "portfolioId =", portfolioId);
-      
       // 获取股票信息
       let finalData = { ...data };
       
@@ -205,14 +196,10 @@ export function AddHoldingDialog({ open, onOpenChange, type, portfolioId }: AddH
         finalData.name = data.symbol;
       }
       
-      console.log("Final data to save:", finalData);
-      
       if (isGuest) {
-        console.log("Saving to localStorage for guest mode");
         // 访客模式：直接保存到 localStorage
         return saveStockToLocalStorage(finalData);
       } else {
-        console.log("Calling API for authenticated mode");
         // 认证模式：调用 API
         const response = await apiRequest("POST", `/api/portfolio-stocks-add?portfolioId=${portfolioId}`, finalData);
         return response.json();
