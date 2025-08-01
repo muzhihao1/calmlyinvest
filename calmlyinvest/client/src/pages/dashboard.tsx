@@ -12,7 +12,8 @@ import { SettingsPanel } from "@/components/settings-panel";
 import { AddHoldingDialog } from "@/components/add-holding-dialog";
 import { CsvImportDialog } from "@/components/csv-import-dialog";
 import { PortfolioCharts } from "@/components/portfolio-charts";
-import { ChartLine, Settings, Clock, RotateCcw, Upload, Download, LogOut, LogIn } from "lucide-react";
+import { ChartLine, Settings, Clock, RotateCcw, Upload, Download, LogOut, LogIn, Edit2, Check, X } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient-supabase";
 import { useMutation } from "@tanstack/react-query";
@@ -75,29 +76,40 @@ export default function Dashboard() {
   // Custom state for guest mode stock holdings
   const [guestStocks, setGuestStocks] = useState<StockHolding[]>([]);
   const [guestOptions, setGuestOptions] = useState<OptionHolding[]>([]);
+  const [guestCashBalance, setGuestCashBalance] = useState<number>(5000);
+  const [editingCash, setEditingCash] = useState(false);
+  const [tempCashValue, setTempCashValue] = useState<string>("");
   
-  // Load guest stocks from localStorage on mount and when portfolioId changes
+  // Load guest data from localStorage on mount and when portfolioId changes
   useEffect(() => {
-    const loadGuestStocks = () => {
+    const loadGuestData = () => {
       if (isGuest && portfolioId === 'demo-portfolio-1') {
         try {
-          const stored = localStorage.getItem('guest_stocks');
-          const allStocks = stored ? JSON.parse(stored) : {};
+          // Load stocks
+          const stocksStored = localStorage.getItem('guest_stocks');
+          const allStocks = stocksStored ? JSON.parse(stocksStored) : {};
           const portfolioStocks = allStocks[portfolioId] || [];
           setGuestStocks(portfolioStocks);
+
+          // Load portfolio settings (cash balance)
+          const settingsStored = localStorage.getItem('guest_portfolio_settings');
+          const allSettings = settingsStored ? JSON.parse(settingsStored) : {};
+          const portfolioSettings = allSettings[portfolioId] || { cashBalance: 5000 };
+          setGuestCashBalance(portfolioSettings.cashBalance || 5000);
         } catch (error) {
-          console.error('Error loading guest stocks from localStorage:', error);
+          console.error('Error loading guest data from localStorage:', error);
           setGuestStocks([]);
+          setGuestCashBalance(5000);
         }
       }
     };
 
     // Load on mount and portfolio change
-    loadGuestStocks();
+    loadGuestData();
 
     // Listen for guest stock updates
     const handleGuestStocksUpdate = () => {
-      loadGuestStocks();
+      loadGuestData();
     };
 
     if (isGuest) {
@@ -178,7 +190,7 @@ export default function Dashboard() {
     const optionValue = options.reduce((sum, option) => 
       sum + (option.contracts * parseFloat(option.currentPrice || "0") * 100), 0);
     const totalMarketValue = totalStockValue + optionValue;
-    const cashBalance = 5000;
+    const cashBalance = guestCashBalance; // Use editable cash balance
     const netLiquidationValue = totalStockValue + optionValue + cashBalance;
     const leverageRatio = netLiquidationValue > 0 ? totalMarketValue / netLiquidationValue : 0;
     
@@ -200,7 +212,7 @@ export default function Dashboard() {
     const optionValue = options.reduce((sum, option) => 
       sum + (option.contracts * parseFloat(option.currentPrice || "0") * 100), 0);
     
-    const cashBalance = 5000; // Fixed demo cash balance
+    const cashBalance = guestCashBalance; // Use editable cash balance
     const marginUsed = 0; // No margin for demo
     const totalEquity = stockValue + optionValue + cashBalance - marginUsed;
     
@@ -216,6 +228,47 @@ export default function Dashboard() {
     };
   };
 
+  // Function to save cash balance to localStorage
+  const saveCashBalance = (newBalance: number) => {
+    try {
+      const stored = localStorage.getItem('guest_portfolio_settings');
+      const allSettings = stored ? JSON.parse(stored) : {};
+      
+      if (!allSettings[portfolioId]) {
+        allSettings[portfolioId] = {};
+      }
+      allSettings[portfolioId].cashBalance = newBalance;
+      
+      localStorage.setItem('guest_portfolio_settings', JSON.stringify(allSettings));
+      setGuestCashBalance(newBalance);
+    } catch (error) {
+      console.error('Error saving cash balance:', error);
+    }
+  };
+
+  // Function to calculate total portfolio performance
+  const calculatePortfolioPerformance = (stocks: StockHolding[], options: OptionHolding[]) => {
+    const totalCost = stocks.reduce((sum, stock) => 
+      sum + (stock.quantity * parseFloat(stock.costPrice)), 0) + 
+      options.reduce((sum, option) => 
+        sum + (option.contracts * parseFloat(option.costPrice) * 100), 0);
+    
+    const totalMarketValue = stocks.reduce((sum, stock) => 
+      sum + (stock.quantity * parseFloat(stock.currentPrice || "0")), 0) +
+      options.reduce((sum, option) => 
+        sum + (option.contracts * parseFloat(option.currentPrice || "0") * 100), 0);
+    
+    const totalPnL = totalMarketValue - totalCost;
+    const totalPnLPercent = totalCost > 0 ? (totalPnL / totalCost) * 100 : 0;
+    
+    return {
+      totalCost,
+      totalMarketValue,
+      totalPnL,
+      totalPnLPercent
+    };
+  };
+
   const { data: riskMetrics = {}, isLoading: riskLoading, refetch: refetchRisk } = useQuery<any>({
     queryKey: [`/api/portfolio-risk-simple?portfolioId=${portfolioId}`],
     enabled: !!portfolioId && !isGuest,
@@ -224,6 +277,36 @@ export default function Dashboard() {
   // Use guest calculations for guests, API data for authenticated users
   const actualRiskMetrics = isGuest ? calculateGuestRiskMetrics(actualStockHoldings, actualOptionHoldings) : riskMetrics;
   const actualPortfolio = isGuest ? calculateGuestPortfolio(actualStockHoldings, actualOptionHoldings) : portfolio;
+  const portfolioPerformance = isGuest ? calculatePortfolioPerformance(actualStockHoldings, actualOptionHoldings) : null;
+
+  // Handle cash balance editing
+  const handleCashEdit = () => {
+    setTempCashValue(guestCashBalance.toString());
+    setEditingCash(true);
+  };
+
+  const handleCashSave = () => {
+    const newBalance = parseFloat(tempCashValue);
+    if (!isNaN(newBalance) && newBalance >= 0) {
+      saveCashBalance(newBalance);
+      toast({
+        title: "更新成功",
+        description: `现金余额已更新为 $${newBalance.toLocaleString()}`,
+      });
+    } else {
+      toast({
+        title: "输入错误",
+        description: "请输入有效的金额",
+        variant: "destructive",
+      });
+    }
+    setEditingCash(false);
+  };
+
+  const handleCashCancel = () => {
+    setEditingCash(false);
+    setTempCashValue("");
+  };
 
   const { data: suggestions = [], isLoading: suggestionsLoading } = useQuery<Suggestion[]>({
     queryKey: [`/api/portfolio-suggestions-simple?portfolioId=${portfolioId}`],
@@ -502,7 +585,7 @@ export default function Dashboard() {
 
           <TabsContent value="holdings" className="space-y-6">
             {/* Account Summary */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
               <div className="bg-slate-800 rounded-xl p-4 border border-gray-700">
                 <div className="text-sm text-gray-400">净清算价值</div>
                 <div className="text-2xl font-bold text-white">
@@ -522,11 +605,62 @@ export default function Dashboard() {
                 </div>
               </div>
               <div className="bg-slate-800 rounded-xl p-4 border border-gray-700">
-                <div className="text-sm text-gray-400">现金余额</div>
-                <div className="text-2xl font-bold text-primary">
-                  ${parseFloat(actualPortfolio?.cashBalance || "0").toLocaleString()}
+                <div className="text-sm text-gray-400 flex items-center">
+                  现金余额
+                  {isGuest && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="ml-2 h-6 w-6 p-0 text-gray-400 hover:text-white"
+                      onClick={handleCashEdit}
+                    >
+                      <Edit2 className="h-3 w-3" />
+                    </Button>
+                  )}
                 </div>
+                {editingCash && isGuest ? (
+                  <div className="flex items-center mt-2">
+                    <Input
+                      type="number"
+                      value={tempCashValue}
+                      onChange={(e) => setTempCashValue(e.target.value)}
+                      className="h-8 text-sm bg-slate-700 border-gray-600"
+                      placeholder="输入金额"
+                    />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="ml-1 h-6 w-6 p-0 text-green-500"
+                      onClick={handleCashSave}
+                    >
+                      <Check className="h-3 w-3" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="ml-1 h-6 w-6 p-0 text-red-500"
+                      onClick={handleCashCancel}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="text-2xl font-bold text-primary">
+                    ${parseFloat(actualPortfolio?.cashBalance || "0").toLocaleString()}
+                  </div>
+                )}
               </div>
+              {isGuest && portfolioPerformance && (
+                <div className="bg-slate-800 rounded-xl p-4 border border-gray-700">
+                  <div className="text-sm text-gray-400">总盈亏</div>
+                  <div className={`text-2xl font-bold ${portfolioPerformance.totalPnL >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                    {portfolioPerformance.totalPnL >= 0 ? '+' : ''}${portfolioPerformance.totalPnL.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </div>
+                  <div className={`text-sm ${portfolioPerformance.totalPnL >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    ({portfolioPerformance.totalPnL >= 0 ? '+' : ''}{portfolioPerformance.totalPnLPercent.toFixed(2)}%)
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Action Buttons */}
