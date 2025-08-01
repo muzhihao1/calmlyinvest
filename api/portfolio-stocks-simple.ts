@@ -27,25 +27,42 @@ async function handler(req: VercelRequest, res: VercelResponse) {
   const { method, query, headers } = req;
   const { portfolioId } = query;
 
-  if (!portfolioId || typeof portfolioId !== 'string') {
-    return res.status(400).json({ error: 'Portfolio ID is required' });
-  }
-
   // Check if it's guest mode
   const isGuestMode = headers['x-guest-user'] === 'true';
-  const authHeader = headers.authorization;
   
   try {
     switch (method) {
+      case 'GET': {
+        if (!portfolioId || typeof portfolioId !== 'string') {
+          return res.status(400).json({ error: 'Portfolio ID is required' });
+        }
+        
+        if (isGuestMode) {
+          // Guest mode - return stocks from memory
+          const stocks = guestStocks[portfolioId] || [];
+          res.status(200).json(stocks);
+        } else {
+          // Authenticated mode - for now return empty array
+          // This should be replaced with actual database query
+          res.status(200).json([]);
+        }
+        break;
+      }
+      
       case 'POST': {
         // Create a new stock holding
         const stockData = req.body;
+        const pid = stockData.portfolioId || portfolioId;
+        
+        if (!pid) {
+          return res.status(400).json({ error: 'Portfolio ID is required' });
+        }
         
         if (isGuestMode) {
           // Guest mode - use in-memory storage
           const newStock = {
             id: `stock-${Date.now()}`,
-            portfolioId,
+            portfolioId: pid,
             symbol: stockData.symbol,
             name: stockData.name || stockData.symbol,
             quantity: stockData.quantity,
@@ -59,25 +76,17 @@ async function handler(req: VercelRequest, res: VercelResponse) {
           };
           
           // Store in memory
-          if (!guestStocks[portfolioId]) {
-            guestStocks[portfolioId] = [];
+          if (!guestStocks[pid]) {
+            guestStocks[pid] = [];
           }
-          guestStocks[portfolioId].push(newStock);
+          guestStocks[pid].push(newStock);
           
           res.status(201).json(newStock);
         } else {
-          // Authenticated mode - use Supabase
-          const token = authHeader?.replace('Bearer ', '');
-          
-          if (!token) {
-            return res.status(401).json({ error: 'Authorization required' });
-          }
-          
-          // For now, just return a mock response for authenticated users
-          // This can be replaced with actual Supabase implementation later
+          // Authenticated mode - for now just return mock
           const newStock = {
             id: `stock-${Date.now()}`,
-            portfolioId,
+            portfolioId: pid,
             symbol: stockData.symbol,
             name: stockData.name || stockData.symbol,
             quantity: stockData.quantity,
@@ -95,20 +104,32 @@ async function handler(req: VercelRequest, res: VercelResponse) {
         break;
       }
       
-      case 'GET': {
-        // Get stocks for portfolio
-        if (isGuestMode) {
-          const stocks = guestStocks[portfolioId] || [];
-          res.status(200).json(stocks);
-        } else {
-          // For authenticated users, return empty array for now
-          res.status(200).json([]);
+      case 'PUT': {
+        // Update stock holding
+        const { id } = query;
+        if (!id || typeof id !== 'string') {
+          return res.status(400).json({ error: 'Stock ID is required' });
         }
+        
+        // For now, just return success
+        res.status(200).json({ success: true });
+        break;
+      }
+      
+      case 'DELETE': {
+        // Delete stock holding
+        const { id } = query;
+        if (!id || typeof id !== 'string') {
+          return res.status(400).json({ error: 'Stock ID is required' });
+        }
+        
+        // For now, just return success
+        res.status(200).json({ success: true });
         break;
       }
       
       default:
-        res.setHeader('Allow', ['POST', 'GET']);
+        res.setHeader('Allow', ['GET', 'POST', 'PUT', 'DELETE']);
         res.status(405).end(`Method ${method} Not Allowed`);
     }
   } catch (error) {
