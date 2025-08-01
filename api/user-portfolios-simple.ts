@@ -73,8 +73,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { data: portfolios, error: fetchError } = await supabase
       .from('portfolios')
       .select('*')
-      .eq('userId', userId)
-      .order('createdAt', { ascending: false });
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
     
     if (fetchError) {
       console.error('Error fetching portfolios:', fetchError);
@@ -85,11 +85,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // If no portfolios exist, create a default one
     if (!portfolios || portfolios.length === 0) {
       const defaultPortfolio = {
-        userId,
+        user_id: userId,
         name: '我的投资组合',
-        totalEquity: '1000000',
-        cashBalance: '300000',
-        marginUsed: '0'
+        total_equity: '1000000',
+        cash_balance: '300000',
+        margin_used: '0'
       };
       
       const { data: newPortfolio, error: createError } = await supabase
