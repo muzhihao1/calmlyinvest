@@ -1,7 +1,7 @@
 {
   "framework": null,
   "installCommand": "cd calmlyinvest && npm install",
-  "buildCommand": "cd calmlyinvest && npm run build",
+  "buildCommand": "node scripts/copy-api-files.js && cd calmlyinvest && npm run build",
   "devCommand": "cd calmlyinvest && npm run dev",
   "outputDirectory": "calmlyinvest/dist/public",
   "functions": {

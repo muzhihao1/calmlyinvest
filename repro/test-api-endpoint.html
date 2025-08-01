@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Endpoint Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .pending {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+        }
+        pre {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        input {
+            width: 100%;
+            padding: 8px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>API Endpoint Test - 404 Fix Verification</h1>
+
+    <div class="test-section">
+        <h2>Test Configuration</h2>
+        <label>
+            API Base URL:
+            <input type="text" id="baseUrl" value="https://calmlyinvest.vercel.app" />
+        </label>
+        <button onclick="runAllTests()">Run All Tests</button>
+    </div>
+
+    <div class="test-section">
+        <h3>1. User Portfolios Simple Endpoint</h3>
+        <p>Testing: <code>/api/user-portfolios-simple?userId=guest-user</code></p>
+        <div id="test1" class="status pending">Pending...</div>
+    </div>
+
+    <div class="test-section">
+        <h3>2. Portfolio Stocks Simple Endpoint</h3>
+        <p>Testing: <code>/api/portfolio-stocks-simple</code></p>
+        <div id="test2" class="status pending">Pending...</div>
+    </div>
+
+    <div class="test-section">
+        <h3>3. Health Check Endpoint</h3>
+        <p>Testing: <code>/api/health</code></p>
+        <div id="test3" class="status pending">Pending...</div>
+    </div>
+
+    <div class="test-section">
+        <h3>4. Auth Login Endpoint (OPTIONS)</h3>
+        <p>Testing: <code>/api/auth/login</code> (CORS preflight)</p>
+        <div id="test4" class="status pending">Pending...</div>
+    </div>
+
+    <script>
+        async function testEndpoint(endpoint, method = 'GET', testId, expectedStatus = 200) {
+            const baseUrl = document.getElementById('baseUrl').value.replace(/\/$/, '');
+            const resultDiv = document.getElementById(testId);
+            
+            resultDiv.className = 'status pending';
+            resultDiv.innerHTML = 'Testing...';
+            
+            try {
+                const response = await fetch(`${baseUrl}${endpoint}`, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const statusOk = response.status === expectedStatus;
+                resultDiv.className = statusOk ? 'status success' : 'status error';
+                
+                let resultHtml = `<strong>Status:</strong> ${response.status} ${response.statusText}<br>`;
+                
+                if (response.headers.get('content-type')?.includes('application/json')) {
+                    const data = await response.json();
+                    resultHtml += `<strong>Response:</strong><pre>${JSON.stringify(data, null, 2)}</pre>`;
+                } else if (response.status !== 200 && response.status !== 204) {
+                    const text = await response.text();
+                    resultHtml += `<strong>Response:</strong><pre>${text.substring(0, 500)}${text.length > 500 ? '...' : ''}</pre>`;
+                }
+                
+                resultDiv.innerHTML = resultHtml;
+                
+                return statusOk;
+            } catch (error) {
+                resultDiv.className = 'status error';
+                resultDiv.innerHTML = `<strong>Error:</strong> ${error.message}`;
+                return false;
+            }
+        }
+
+        async function runAllTests() {
+            console.log('Starting API endpoint tests...');
+            
+            // Test 1: User portfolios endpoint
+            await testEndpoint('/api/user-portfolios-simple?userId=guest-user', 'GET', 'test1');
+            
+            // Test 2: Portfolio stocks endpoint
+            await testEndpoint('/api/portfolio-stocks-simple', 'GET', 'test2');
+            
+            // Test 3: Health check
+            await testEndpoint('/api/health', 'GET', 'test3');
+            
+            // Test 4: Auth CORS preflight
+            await testEndpoint('/api/auth/login', 'OPTIONS', 'test4', 200);
+            
+            console.log('All tests completed');
+        }
+
+        // Auto-run tests if URL parameter is set
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('autorun') === 'true') {
+            runAllTests();
+        }
+    </script>
+</body>
+</html>
