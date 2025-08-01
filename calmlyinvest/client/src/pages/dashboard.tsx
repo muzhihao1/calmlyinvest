@@ -33,39 +33,23 @@ export default function Dashboard() {
   const userId = user?.id || "guest-user";
   const isLoggedIn = !isGuest && !!user;
   
-  // Mutation to create default portfolio
-  const createPortfolioMutation = useMutation({
-    mutationFn: async () => {
-      const defaultPortfolio = {
-        name: isGuest ? "访客演示组合" : "我的投资组合",
-        totalEquity: "1000000",
-        cashBalance: "300000",
-        marginUsed: "0",
-        userId
-      };
-      const response = await apiRequest("POST", "/api/portfolios", defaultPortfolio);
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/user-portfolios-simple?userId=${userId}`] });
-    }
-  });
-
-  // Fetch user's portfolios
+  // Fetch user's portfolios (API handles portfolio creation automatically)
   const { data: portfolios = [], isLoading: portfoliosLoading } = useQuery<Portfolio[]>({
     queryKey: [`/api/user-portfolios-simple?userId=${userId}`],
-    enabled: !!userId,
+    enabled: !!userId && !isGuest, // Only enabled for authenticated users
   });
-  
-  // Create default portfolio if none exists (but not for guest users)
-  useEffect(() => {
-    if (!portfoliosLoading && portfolios.length === 0 && userId && !isGuest) {
-      createPortfolioMutation.mutate();
-    }
-  }, [portfoliosLoading, portfolios, userId, isGuest]);
   
   // Use the first portfolio or demo portfolio for guests
   const portfolioId = portfolios[0]?.id || (isGuest ? "demo-portfolio-1" : null);
+  
+  console.log('Debug Dashboard:', {
+    isGuest,
+    userId,
+    portfoliosLength: portfolios.length,
+    portfolioId,
+    isLoggedIn,
+    portfoliosLoading
+  });
   
 
   const { data: portfolio, isLoading: portfolioLoading } = useQuery<Portfolio>({
@@ -679,7 +663,7 @@ export default function Dashboard() {
                   setAddDialogOpen(true); 
                 }}
                 className="bg-primary hover:bg-blue-600"
-                disabled={!portfolioId || createPortfolioMutation.isPending}
+                disabled={!portfolioId}
               >
                 <ChartLine className="mr-2 h-4 w-4" />
                 添加股票持仓
@@ -697,7 +681,7 @@ export default function Dashboard() {
                   setAddDialogOpen(true); 
                 }}
                 className="bg-primary hover:bg-blue-600"
-                disabled={!portfolioId || createPortfolioMutation.isPending}
+                disabled={!portfolioId}
               >
                 <Settings className="mr-2 h-4 w-4" />
                 添加期权持仓
@@ -705,7 +689,7 @@ export default function Dashboard() {
               <Button 
                 variant="secondary"
                 onClick={() => setCsvImportOpen(true)}
-                disabled={!portfolioId || createPortfolioMutation.isPending}
+                disabled={!portfolioId}
               >
                 <Upload className="mr-2 h-4 w-4" />
                 导入CSV
