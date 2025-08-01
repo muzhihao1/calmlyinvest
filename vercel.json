@@ -1,0 +1,25 @@
+{
+  "framework": null,
+  "installCommand": "cd calmlyinvest && npm install",
+  "buildCommand": "cd calmlyinvest && npm run build",
+  "devCommand": "cd calmlyinvest && npm run dev",
+  "outputDirectory": "calmlyinvest/dist/public",
+  "functions": {
+    "api/**/*.ts": {
+      "maxDuration": 10
+    }
+  },
+  "routes": [
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
+  ]
+}
