@@ -156,10 +156,66 @@ export default function Dashboard() {
   // Use guest options for guests, API data for authenticated users
   const actualOptionHoldings = isGuest ? guestOptions : optionHoldings;
 
+  // Client-side risk calculations for guest mode
+  const calculateGuestRiskMetrics = (stocks: StockHolding[], options: OptionHolding[]) => {
+    const totalStockValue = stocks.reduce((sum, stock) => 
+      sum + (stock.quantity * parseFloat(stock.currentPrice || "0")), 0);
+    
+    const portfolioBeta = stocks.length > 0 ? 
+      stocks.reduce((sum, stock) => {
+        const value = stock.quantity * parseFloat(stock.currentPrice || "0");
+        const beta = parseFloat(stock.beta || "1.0");
+        return sum + (beta * value);
+      }, 0) / totalStockValue : 0;
+    
+    const maxConcentration = stocks.length > 0 ? 
+      Math.max(...stocks.map(stock => {
+        const value = stock.quantity * parseFloat(stock.currentPrice || "0");
+        return totalStockValue > 0 ? (value / totalStockValue) * 100 : 0;
+      })) : 0;
+    
+    // Simple leverage calculation: (Stock Value + Option Value) / Net Liquidation Value
+    const optionValue = options.reduce((sum, option) => 
+      sum + (option.contracts * parseFloat(option.currentPrice || "0") * 100), 0);
+    const totalMarketValue = totalStockValue + optionValue;
+    const netLiquidationValue = 10000; // Demo portfolio base value
+    const leverageRatio = netLiquidationValue > 0 ? totalMarketValue / netLiquidationValue : 0;
+    
+    return {
+      stockValue: totalStockValue.toFixed(2),
+      portfolioBeta: portfolioBeta.toFixed(2),
+      maxConcentration: maxConcentration.toFixed(1),
+      leverageRatio: leverageRatio.toFixed(2),
+      marginUsageRatio: "0",
+      remainingLiquidity: "100",
+      riskLevel: leverageRatio > 1.5 ? "RED" : leverageRatio > 1.2 ? "YELLOW" : "GREEN"
+    };
+  };
+
+  const calculateGuestPortfolio = (stocks: StockHolding[], options: OptionHolding[]) => {
+    const stockValue = stocks.reduce((sum, stock) => 
+      sum + (stock.quantity * parseFloat(stock.currentPrice || "0")), 0);
+    
+    return {
+      id: "demo-portfolio-1",
+      name: "访客演示组合",
+      totalEquity: "10000",
+      cashBalance: "5000",
+      marginUsed: "0",
+      userId: "guest-user",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+  };
+
   const { data: riskMetrics = {}, isLoading: riskLoading, refetch: refetchRisk } = useQuery<any>({
     queryKey: [`/api/portfolio-risk-simple?portfolioId=${portfolioId}`],
-    enabled: !!portfolioId,
+    enabled: !!portfolioId && !isGuest,
   });
+
+  // Use guest calculations for guests, API data for authenticated users
+  const actualRiskMetrics = isGuest ? calculateGuestRiskMetrics(actualStockHoldings, actualOptionHoldings) : riskMetrics;
+  const actualPortfolio = isGuest ? calculateGuestPortfolio(actualStockHoldings, actualOptionHoldings) : portfolio;
 
   const { data: suggestions = [], isLoading: suggestionsLoading } = useQuery<Suggestion[]>({
     queryKey: [`/api/portfolio-suggestions-simple?portfolioId=${portfolioId}`],
@@ -225,7 +281,7 @@ export default function Dashboard() {
   };
 
   const handleExportData = () => {
-    if (!stockHoldings || !optionHoldings) {
+    if (!actualStockHoldings || !actualOptionHoldings) {
       toast({
         title: "No data to export",
         description: "Please wait for data to load",
@@ -236,7 +292,7 @@ export default function Dashboard() {
 
     // Export stock holdings
     const stockHeaders = ["symbol", "name", "quantity", "costPrice", "currentPrice", "beta"];
-    const stockRows = stockHoldings.map(h => [
+    const stockRows = actualStockHoldings.map(h => [
       h.symbol,
       h.name || "",
       h.quantity,
@@ -263,7 +319,8 @@ export default function Dashboard() {
     });
   };
 
-  if (portfolioLoading || stocksLoading || optionsLoading || riskLoading) {
+  // In guest mode, don't wait for API loading states
+  if (!isGuest && (portfolioLoading || stocksLoading || optionsLoading || riskLoading)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -364,8 +421,8 @@ export default function Dashboard() {
             {/* Risk Gauge */}
             <div className="lg:col-span-1">
               <RiskGauge 
-                leverageRatio={parseFloat(riskMetrics?.leverageRatio || "0")} 
-                riskLevel={riskMetrics?.riskLevel || "GREEN"}
+                leverageRatio={parseFloat(actualRiskMetrics?.leverageRatio || "0")} 
+                riskLevel={actualRiskMetrics?.riskLevel || "GREEN"}
               />
             </div>
             
@@ -374,30 +431,30 @@ export default function Dashboard() {
               <div className="grid grid-cols-2 gap-4 h-full">
                 <MetricsCard
                   title="投资组合Beta值"
-                  value={riskMetrics?.portfolioBeta || "0.00"}
-                  description={parseFloat(riskMetrics?.portfolioBeta || "0") > 1.2 ? "高于市场波动" : "波动适中"}
-                  type={parseFloat(riskMetrics?.portfolioBeta || "0") > 1.2 ? "warning" : "success"}
+                  value={actualRiskMetrics?.portfolioBeta || "0.00"}
+                  description={parseFloat(actualRiskMetrics?.portfolioBeta || "0") > 1.2 ? "高于市场波动" : "波动适中"}
+                  type={parseFloat(actualRiskMetrics?.portfolioBeta || "0") > 1.2 ? "warning" : "success"}
                   tooltip="衡量相对市场的波动性"
                 />
                 <MetricsCard
                   title="最大持仓集中度"
-                  value={`${riskMetrics?.maxConcentration || "0"}%`}
-                  description={parseFloat(riskMetrics?.maxConcentration || "0") > 20 ? "超过建议上限" : "集中度适中"}
-                  type={parseFloat(riskMetrics?.maxConcentration || "0") > 20 ? "danger" : "success"}
+                  value={`${actualRiskMetrics?.maxConcentration || "0"}%`}
+                  description={parseFloat(actualRiskMetrics?.maxConcentration || "0") > 20 ? "超过建议上限" : "集中度适中"}
+                  type={parseFloat(actualRiskMetrics?.maxConcentration || "0") > 20 ? "danger" : "success"}
                   tooltip="单个标的占总投资组合比例"
                 />
                 <MetricsCard
                   title="保证金使用率"
-                  value={`${riskMetrics?.marginUsageRatio || "0"}%`}
-                  description={parseFloat(riskMetrics?.marginUsageRatio || "0") > 80 ? "接近保证金上限" : "使用率适中"}
-                  type={parseFloat(riskMetrics?.marginUsageRatio || "0") > 80 ? "warning" : "success"}
+                  value={`${actualRiskMetrics?.marginUsageRatio || "0"}%`}
+                  description={parseFloat(actualRiskMetrics?.marginUsageRatio || "0") > 80 ? "接近保证金上限" : "使用率适中"}
+                  type={parseFloat(actualRiskMetrics?.marginUsageRatio || "0") > 80 ? "warning" : "success"}
                   tooltip="已用保证金占总保证金比例"
                 />
                 <MetricsCard
                   title="剩余流动性"
-                  value={`${riskMetrics?.remainingLiquidity || "0"}%`}
-                  description={parseFloat(riskMetrics?.remainingLiquidity || "0") < 30 ? "低于建议30%" : "流动性充足"}
-                  type={parseFloat(riskMetrics?.remainingLiquidity || "0") < 30 ? "danger" : "success"}
+                  value={`${actualRiskMetrics?.remainingLiquidity || "0"}%`}
+                  description={parseFloat(actualRiskMetrics?.remainingLiquidity || "0") < 30 ? "低于建议30%" : "流动性充足"}
+                  type={parseFloat(actualRiskMetrics?.remainingLiquidity || "0") < 30 ? "danger" : "success"}
                   tooltip="剩余流动性占净清算价值比例"
                 />
               </div>
@@ -441,25 +498,25 @@ export default function Dashboard() {
               <div className="bg-slate-800 rounded-xl p-4 border border-gray-700">
                 <div className="text-sm text-gray-400">净清算价值</div>
                 <div className="text-2xl font-bold text-white">
-                  ${parseFloat(portfolio?.totalEquity || "0").toLocaleString()}
+                  ${parseFloat(actualPortfolio?.totalEquity || "0").toLocaleString()}
                 </div>
               </div>
               <div className="bg-slate-800 rounded-xl p-4 border border-gray-700">
                 <div className="text-sm text-gray-400">市场价值</div>
                 <div className="text-2xl font-bold text-white">
-                  ${parseFloat(riskMetrics?.stockValue || "0").toLocaleString()}
+                  ${parseFloat(actualRiskMetrics?.stockValue || "0").toLocaleString()}
                 </div>
               </div>
               <div className="bg-slate-800 rounded-xl p-4 border border-gray-700">
                 <div className="text-sm text-gray-400">维持保证金</div>
                 <div className="text-2xl font-bold text-yellow-500">
-                  ${parseFloat(portfolio?.marginUsed || "0").toLocaleString()}
+                  ${parseFloat(actualPortfolio?.marginUsed || "0").toLocaleString()}
                 </div>
               </div>
               <div className="bg-slate-800 rounded-xl p-4 border border-gray-700">
                 <div className="text-sm text-gray-400">现金余额</div>
                 <div className="text-2xl font-bold text-primary">
-                  ${parseFloat(portfolio?.cashBalance || "0").toLocaleString()}
+                  ${parseFloat(actualPortfolio?.cashBalance || "0").toLocaleString()}
                 </div>
               </div>
             </div>
@@ -530,8 +587,8 @@ export default function Dashboard() {
             <PortfolioCharts 
               stockHoldings={actualStockHoldings || []} 
               optionHoldings={actualOptionHoldings || []}
-              riskMetrics={riskMetrics}
-              portfolio={portfolio}
+              riskMetrics={actualRiskMetrics}
+              portfolio={actualPortfolio}
             />
           </TabsContent>
 
@@ -539,7 +596,7 @@ export default function Dashboard() {
             <RiskAnalysis 
               stockHoldings={actualStockHoldings || []} 
               optionHoldings={actualOptionHoldings || []}
-              riskMetrics={riskMetrics}
+              riskMetrics={actualRiskMetrics}
             />
           </TabsContent>
 
