@@ -489,7 +489,7 @@ export default function Dashboard() {
         open={addDialogOpen}
         onOpenChange={setAddDialogOpen}
         type={addDialogType}
-        portfolioId={portfolioId || ''}
+        portfolioId={portfolioId}
       />
       
       <CsvImportDialog
