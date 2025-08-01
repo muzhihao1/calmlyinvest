@@ -1,0 +1,10 @@
+Temporary fix: Remove external imports from Vercel serverless function
+
+- Replace import from ../server/routes with inline placeholder
+- Add basic health check and 404 routes
+- This stops the ERR_MODULE_NOT_FOUND errors
+- Full implementation to be added in next commit
+
+🤖 Generated with Claude Code
+
+Co-Authored-By: Claude <noreply@anthropic.com>

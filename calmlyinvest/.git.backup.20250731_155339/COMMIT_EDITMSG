@@ -1,0 +1,10 @@
+Security fix: Remove all hardcoded API keys and sensitive information
+
+- Remove hardcoded Supabase keys from source files
+- Update .gitignore to exclude sensitive files
+- Add security documentation and cleanup scripts
+- Migrate to Vercel serverless functions
+- Update authentication to use environment variables
+
+IMPORTANT: This commit removes sensitive information.
+All API keys must be rotated immediately.

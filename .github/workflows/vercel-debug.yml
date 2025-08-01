@@ -1,0 +1,114 @@
+name: Vercel部署调试
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+  
+jobs:
+  debug-deployment:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: 设置Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+    
+    - name: 安装Vercel CLI
+      run: npm install -g vercel
+    
+    - name: 检查API函数文件
+      run: |
+        echo "🔍 检查API函数文件结构"
+        echo "========================"
+        
+        echo -e "\n根目录API文件:"
+        ls -la api/ || echo "未找到api目录"
+        
+        echo -e "\n验证函数导出:"
+        for file in api/*.ts; do
+          if [ -f "$file" ]; then
+            echo -n "检查 $file... "
+            if grep -q "export default" "$file"; then
+              echo "✅"
+            else
+              echo "❌ 缺少export default"
+              cat "$file" | head -20
+            fi
+          fi
+        done
+    
+    - name: 验证TypeScript编译
+      run: |
+        echo "🔧 验证TypeScript编译"
+        echo "===================="
+        
+        # 安装依赖
+        cd calmlyinvest && npm ci
+        
+        # 尝试编译每个API文件
+        for file in ../api/*.ts; do
+          if [ -f "$file" ]; then
+            echo -e "\n编译 $file..."
+            npx tsc "$file" --noEmit --esModuleInterop --skipLibCheck || {
+              echo "❌ 编译失败"
+              echo "查看前50行代码:"
+              head -50 "$file"
+            }
+          fi
+        done
+    
+    - name: 模拟Vercel构建环境
+      run: |
+        echo "🏗️ 模拟Vercel构建"
+        echo "================="
+        
+        # 检查vercel.json
+        if [ -f "vercel.json" ]; then
+          echo "vercel.json内容:"
+          cat vercel.json
+        fi
+        
+        # 测试构建
+        cd calmlyinvest && npm run build
+    
+    - name: 创建诊断报告
+      if: failure()
+      run: |
+        echo "📋 创建诊断报告"
+        echo "=============="
+        
+        cat > deployment-debug-report.md << EOF
+        # Vercel部署调试报告
+        
+        生成时间: $(date)
+        
+        ## 文件结构
+        \`\`\`
+        $(tree -L 3 -I 'node_modules|dist' || find . -type f -name "*.ts" -o -name "*.js" | grep -E "(api|server)" | sort)
+        \`\`\`
+        
+        ## API函数检查
+        $(for f in api/*.ts; do [ -f "$f" ] && echo "- $f: $(grep -c "export default" "$f") exports"; done)
+        
+        ## 构建日志
+        查看上面的构建输出
+        
+        ## 建议修复步骤
+        1. 确保所有API函数都有 \`export default handler\`
+        2. 检查TypeScript类型导入路径
+        3. 验证CORS配置
+        4. 确认环境变量设置
+        EOF
+        
+        cat deployment-debug-report.md
+    
+    - name: 上传调试报告
+      if: failure()
+      uses: actions/upload-artifact@v3
+      with:
+        name: vercel-debug-report
+        path: deployment-debug-report.md
