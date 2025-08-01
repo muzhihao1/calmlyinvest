@@ -35,6 +35,7 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/auth-context";
 import { insertStockHoldingSchema, insertOptionHoldingSchema } from "@shared/schema-types";
 
 const stockFormSchema = z.object({
@@ -71,8 +72,54 @@ interface AddHoldingDialogProps {
 export function AddHoldingDialog({ open, onOpenChange, type, portfolioId }: AddHoldingDialogProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { isGuest } = useAuth();
   
   console.log("AddHoldingDialog rendered, open:", open, "type:", type, "portfolioId:", portfolioId);
+  
+  // Helper function to save stock to localStorage for guest mode
+  const saveStockToLocalStorage = (stockData: any) => {
+    console.log("saveStockToLocalStorage called with:", stockData);
+    try {
+      const stored = localStorage.getItem('guest_stocks');
+      console.log("Current localStorage guest_stocks:", stored);
+      const allStocks = stored ? JSON.parse(stored) : {};
+      
+      // Calculate derived values
+      const quantity = parseFloat(stockData.quantity);
+      const currentPrice = parseFloat(stockData.currentPrice || stockData.costPrice);
+      const costPrice = parseFloat(stockData.costPrice);
+      
+      const newStock = {
+        id: `stock-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        portfolioId: stockData.portfolioId,
+        symbol: stockData.symbol,
+        name: stockData.name || stockData.symbol,
+        quantity: stockData.quantity,
+        costPrice: stockData.costPrice,
+        currentPrice: stockData.currentPrice || stockData.costPrice,
+        beta: stockData.beta || '1.0',
+        marketValue: (quantity * currentPrice).toFixed(2),
+        unrealizedPnl: ((currentPrice - costPrice) * quantity).toFixed(2),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      
+      console.log("New stock object:", newStock);
+      
+      if (!allStocks[portfolioId]) {
+        allStocks[portfolioId] = [];
+      }
+      allStocks[portfolioId].push(newStock);
+      
+      console.log("Updated allStocks:", allStocks);
+      localStorage.setItem('guest_stocks', JSON.stringify(allStocks));
+      console.log("Saved to localStorage successfully");
+      return newStock;
+    } catch (error) {
+      console.error('Error saving stock to localStorage:', error);
+      throw error;
+    }
+  };
   
   // Don't render if no portfolioId
   if (!portfolioId) {
@@ -137,11 +184,13 @@ export function AddHoldingDialog({ open, onOpenChange, type, portfolioId }: AddH
 
   const addStockMutation = useMutation({
     mutationFn: async (data: z.infer<typeof stockFormSchema>) => {
+      console.log("addStockMutation: isGuest =", isGuest, "portfolioId =", portfolioId);
+      
       // 获取股票信息
       let finalData = { ...data };
       
       try {
-        const quoteResponse = await apiRequest("GET", `/api/stock-quote-simple?symbol=${data.symbol}`);
+        const quoteResponse = await fetch(`/api/stock-quote-simple?symbol=${data.symbol}`);
         const quote = await quoteResponse.json();
         
         // 自动填充数据
@@ -155,12 +204,29 @@ export function AddHoldingDialog({ open, onOpenChange, type, portfolioId }: AddH
         finalData.name = data.symbol;
       }
       
-      const response = await apiRequest("POST", `/api/portfolio-stocks-add?portfolioId=${portfolioId}`, finalData);
-      return response.json();
+      console.log("Final data to save:", finalData);
+      
+      if (isGuest) {
+        console.log("Saving to localStorage for guest mode");
+        // 访客模式：直接保存到 localStorage
+        return saveStockToLocalStorage(finalData);
+      } else {
+        console.log("Calling API for authenticated mode");
+        // 认证模式：调用 API
+        const response = await apiRequest("POST", `/api/portfolio-stocks-add?portfolioId=${portfolioId}`, finalData);
+        return response.json();
+      }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/portfolio-stocks-simple?portfolioId=${portfolioId}`] });
-      queryClient.invalidateQueries({ queryKey: [`/api/portfolio-risk-simple?portfolioId=${portfolioId}`] });
+      if (isGuest) {
+        // 访客模式：触发页面刷新
+        window.dispatchEvent(new CustomEvent('guestStocksUpdated'));
+      } else {
+        // 认证模式：清除查询缓存
+        queryClient.invalidateQueries({ queryKey: [`/api/portfolio-stocks-simple?portfolioId=${portfolioId}`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/portfolio-risk-simple?portfolioId=${portfolioId}`] });
+      }
+      
       toast({
         title: "添加成功",
         description: "股票持仓已添加到投资组合",

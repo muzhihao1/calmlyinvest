@@ -72,10 +72,48 @@ export default function Dashboard() {
     enabled: !!portfolioId,
   });
 
+  // Custom state for guest mode stock holdings
+  const [guestStocks, setGuestStocks] = useState<StockHolding[]>([]);
+  
+  // Load guest stocks from localStorage on mount and when portfolioId changes
+  useEffect(() => {
+    const loadGuestStocks = () => {
+      if (isGuest && portfolioId === 'demo-portfolio-1') {
+        try {
+          const stored = localStorage.getItem('guest_stocks');
+          const allStocks = stored ? JSON.parse(stored) : {};
+          const portfolioStocks = allStocks[portfolioId] || [];
+          setGuestStocks(portfolioStocks);
+        } catch (error) {
+          console.error('Error loading guest stocks from localStorage:', error);
+          setGuestStocks([]);
+        }
+      }
+    };
+
+    // Load on mount and portfolio change
+    loadGuestStocks();
+
+    // Listen for guest stock updates
+    const handleGuestStocksUpdate = () => {
+      loadGuestStocks();
+    };
+
+    if (isGuest) {
+      window.addEventListener('guestStocksUpdated', handleGuestStocksUpdate);
+      return () => {
+        window.removeEventListener('guestStocksUpdated', handleGuestStocksUpdate);
+      };
+    }
+  }, [isGuest, portfolioId]);
+
   const { data: stockHoldings = [], isLoading: stocksLoading } = useQuery<StockHolding[]>({
     queryKey: [`/api/portfolio-stocks-simple?portfolioId=${portfolioId}`],
-    enabled: !!portfolioId,
+    enabled: !!portfolioId && !isGuest,
   });
+  
+  // Use guest stocks for guests, API data for authenticated users
+  const actualStockHoldings = isGuest ? guestStocks : stockHoldings;
 
   const { data: optionHoldings = [], isLoading: optionsLoading } = useQuery<OptionHolding[]>({
     queryKey: [`/api/portfolio-options-simple?portfolioId=${portfolioId}`],
@@ -448,7 +486,7 @@ export default function Dashboard() {
             </div>
 
             {/* Holdings Tables */}
-            <HoldingsTable holdings={stockHoldings || []} portfolioId={portfolioId || ''} />
+            <HoldingsTable holdings={actualStockHoldings || []} portfolioId={portfolioId || ''} />
             <OptionsTable holdings={optionHoldings || []} portfolioId={portfolioId || ''} />
           </TabsContent>
 
