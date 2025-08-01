@@ -178,7 +178,8 @@ export default function Dashboard() {
     const optionValue = options.reduce((sum, option) => 
       sum + (option.contracts * parseFloat(option.currentPrice || "0") * 100), 0);
     const totalMarketValue = totalStockValue + optionValue;
-    const netLiquidationValue = 10000; // Demo portfolio base value
+    const cashBalance = 5000;
+    const netLiquidationValue = totalStockValue + optionValue + cashBalance;
     const leverageRatio = netLiquidationValue > 0 ? totalMarketValue / netLiquidationValue : 0;
     
     return {
@@ -196,12 +197,19 @@ export default function Dashboard() {
     const stockValue = stocks.reduce((sum, stock) => 
       sum + (stock.quantity * parseFloat(stock.currentPrice || "0")), 0);
     
+    const optionValue = options.reduce((sum, option) => 
+      sum + (option.contracts * parseFloat(option.currentPrice || "0") * 100), 0);
+    
+    const cashBalance = 5000; // Fixed demo cash balance
+    const marginUsed = 0; // No margin for demo
+    const totalEquity = stockValue + optionValue + cashBalance - marginUsed;
+    
     return {
       id: "demo-portfolio-1",
       name: "访客演示组合",
-      totalEquity: "10000",
-      cashBalance: "5000",
-      marginUsed: "0",
+      totalEquity: totalEquity.toFixed(2),
+      cashBalance: cashBalance.toFixed(2),
+      marginUsed: marginUsed.toFixed(2),
       userId: "guest-user",
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
