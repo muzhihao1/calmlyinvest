@@ -1,4 +1,13 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { createClient } from '@supabase/supabase-js';
+
+// Initialize Supabase client
+const supabaseUrl = process.env.SUPABASE_URL!;
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY!;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+
+// Use service role key for server-side operations
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Set CORS headers
@@ -18,6 +27,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   
   const userId = req.query.userId as string;
   
+  if (!userId) {
+    res.status(400).json({ error: 'userId is required' });
+    return;
+  }
+  
   // Return mock portfolio data for guest-user
   if (userId === 'guest-user') {
     res.status(200).json([
@@ -32,7 +46,70 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         updatedAt: new Date().toISOString()
       }
     ]);
-  } else {
-    res.status(200).json([]);
+    return;
+  }
+  
+  try {
+    // Get authorization header
+    const authHeader = req.headers.authorization;
+    if (!authHeader || authHeader === 'Bearer guest-mode') {
+      res.status(200).json([]);
+      return;
+    }
+    
+    // Extract token
+    const token = authHeader.replace('Bearer ', '');
+    
+    // Verify the user with Supabase using the token
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    
+    if (authError || !user || user.id !== userId) {
+      console.error('Auth error:', authError);
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+    
+    // Fetch portfolios for the authenticated user
+    const { data: portfolios, error: fetchError } = await supabase
+      .from('portfolios')
+      .select('*')
+      .eq('userId', userId)
+      .order('createdAt', { ascending: false });
+    
+    if (fetchError) {
+      console.error('Error fetching portfolios:', fetchError);
+      res.status(500).json({ error: 'Failed to fetch portfolios' });
+      return;
+    }
+    
+    // If no portfolios exist, create a default one
+    if (!portfolios || portfolios.length === 0) {
+      const defaultPortfolio = {
+        userId,
+        name: '我的投资组合',
+        totalEquity: '1000000',
+        cashBalance: '300000',
+        marginUsed: '0'
+      };
+      
+      const { data: newPortfolio, error: createError } = await supabase
+        .from('portfolios')
+        .insert([defaultPortfolio])
+        .select()
+        .single();
+      
+      if (createError) {
+        console.error('Error creating portfolio:', createError);
+        res.status(500).json({ error: 'Failed to create portfolio' });
+        return;
+      }
+      
+      res.status(200).json([newPortfolio]);
+    } else {
+      res.status(200).json(portfolios);
+    }
+  } catch (error) {
+    console.error('Unexpected error:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 }

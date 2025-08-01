@@ -1,4 +1,18 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
+#!/usr/bin/env node
+
+/**
+ * Fix Portfolio Loading for Authenticated Users
+ * 
+ * This script fixes the user-portfolios-simple API to properly handle authenticated users
+ * by fetching portfolios from the database and creating a default portfolio if none exists.
+ */
+
+const fs = require('fs');
+const path = require('path');
+
+const API_FILE = path.join(__dirname, '../calmlyinvest/api/user-portfolios-simple.ts');
+
+const FIXED_API_CONTENT = `import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 
 // Initialize Supabase client
@@ -113,3 +127,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.status(500).json({ error: 'Internal server error' });
   }
 }
+`;
+
+function main() {
+  console.log('Fixing user-portfolios-simple API...');
+  
+  // Backup existing file
+  if (fs.existsSync(API_FILE)) {
+    const backupFile = API_FILE + '.backup';
+    fs.copyFileSync(API_FILE, backupFile);
+    console.log(`Backed up existing file to: ${backupFile}`);
+  }
+  
+  // Write the fixed API
+  fs.writeFileSync(API_FILE, FIXED_API_CONTENT);
+  console.log('✅ Fixed user-portfolios-simple API');
+  
+  console.log('\nChanges made:');
+  console.log('- Added Supabase client initialization');
+  console.log('- Added proper authentication verification');
+  console.log('- Added portfolio fetching from database');
+  console.log('- Added automatic creation of default portfolio if none exists');
+  console.log('- Maintained guest mode support');
+  
+  console.log('\nNext steps:');
+  console.log('1. Deploy to Vercel');
+  console.log('2. Test with user 279838958@qq.com');
+}
+
+main();
