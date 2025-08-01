@@ -272,10 +272,10 @@ export function HoldingsTable({ holdings, portfolioId }: HoldingsTableProps) {
                     <TableCell className="text-white">${parseFloat(holding.costPrice).toFixed(2)}</TableCell>
                     <TableCell className="text-white">${parseFloat(holding.currentPrice || "0").toFixed(2)}</TableCell>
                     <TableCell className="text-white">{parseFloat(holding.beta || "1.0").toFixed(2)}</TableCell>
-                    <TableCell className="text-white">${marketValue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</TableCell>
+                    <TableCell className="text-white">${marketValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
                     <TableCell>
                       <span className={pnl.isPositive ? "text-green-500" : "text-red-500"}>
-                        {pnl.isPositive ? "+" : ""}${pnl.absolute.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })} ({pnl.isPositive ? "+" : ""}{pnl.percentage.toFixed(2)}%)
+                        {pnl.isPositive ? "+" : ""}${pnl.absolute.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ({pnl.isPositive ? "+" : ""}{pnl.percentage.toFixed(2)}%)
                       </span>
                     </TableCell>
                     <TableCell>

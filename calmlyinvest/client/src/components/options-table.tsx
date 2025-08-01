@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Edit, Trash2, Clock } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/auth-context";
 import { EditOptionDialog } from "./edit-option-dialog";
 import type { OptionHolding } from "@shared/schema-types";
 
@@ -24,16 +25,46 @@ interface OptionsTableProps {
 export function OptionsTable({ holdings, portfolioId }: OptionsTableProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { isGuest } = useAuth();
   const [editingOption, setEditingOption] = useState<OptionHolding | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
 
+  // Helper function to delete option from localStorage for guest mode
+  const deleteOptionFromLocalStorage = (optionId: string) => {
+    try {
+      const stored = localStorage.getItem('guest_options');
+      const allOptions = stored ? JSON.parse(stored) : {};
+      
+      if (allOptions[portfolioId]) {
+        allOptions[portfolioId] = allOptions[portfolioId].filter((option: OptionHolding) => option.id !== optionId);
+        localStorage.setItem('guest_options', JSON.stringify(allOptions));
+      }
+    } catch (error) {
+      console.error('Error deleting option from localStorage:', error);
+      throw error;
+    }
+  };
+
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      await apiRequest("DELETE", `/api/options/${id}`);
+      if (isGuest) {
+        // Guest mode: delete from localStorage
+        deleteOptionFromLocalStorage(id);
+      } else {
+        // Authenticated mode: call API
+        await apiRequest("DELETE", `/api/options/${id}`);
+      }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/portfolio/${portfolioId}/options`] });
-      queryClient.invalidateQueries({ queryKey: [`/api/portfolio/${portfolioId}/risk`] });
+      if (isGuest) {
+        // Guest mode: trigger page refresh
+        window.dispatchEvent(new CustomEvent('guestOptionsUpdated'));
+      } else {
+        // Authenticated mode: clear query cache
+        queryClient.invalidateQueries({ queryKey: [`/api/portfolio/${portfolioId}/options`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/portfolio/${portfolioId}/risk`] });
+      }
+      
       toast({
         title: "删除成功",
         description: "期权持仓已删除",

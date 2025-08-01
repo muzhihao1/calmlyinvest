@@ -74,6 +74,7 @@ export default function Dashboard() {
 
   // Custom state for guest mode stock holdings
   const [guestStocks, setGuestStocks] = useState<StockHolding[]>([]);
+  const [guestOptions, setGuestOptions] = useState<OptionHolding[]>([]);
   
   // Load guest stocks from localStorage on mount and when portfolioId changes
   useEffect(() => {
@@ -107,6 +108,38 @@ export default function Dashboard() {
     }
   }, [isGuest, portfolioId]);
 
+  // Load guest options from localStorage on mount and when portfolioId changes
+  useEffect(() => {
+    const loadGuestOptions = () => {
+      if (isGuest && portfolioId === 'demo-portfolio-1') {
+        try {
+          const stored = localStorage.getItem('guest_options');
+          const allOptions = stored ? JSON.parse(stored) : {};
+          const portfolioOptions = allOptions[portfolioId] || [];
+          setGuestOptions(portfolioOptions);
+        } catch (error) {
+          console.error('Error loading guest options from localStorage:', error);
+          setGuestOptions([]);
+        }
+      }
+    };
+
+    // Load on mount and portfolio change
+    loadGuestOptions();
+
+    // Listen for guest option updates
+    const handleGuestOptionsUpdate = () => {
+      loadGuestOptions();
+    };
+
+    if (isGuest) {
+      window.addEventListener('guestOptionsUpdated', handleGuestOptionsUpdate);
+      return () => {
+        window.removeEventListener('guestOptionsUpdated', handleGuestOptionsUpdate);
+      };
+    }
+  }, [isGuest, portfolioId]);
+
   const { data: stockHoldings = [], isLoading: stocksLoading } = useQuery<StockHolding[]>({
     queryKey: [`/api/portfolio-stocks-simple?portfolioId=${portfolioId}`],
     enabled: !!portfolioId && !isGuest,
@@ -117,8 +150,11 @@ export default function Dashboard() {
 
   const { data: optionHoldings = [], isLoading: optionsLoading } = useQuery<OptionHolding[]>({
     queryKey: [`/api/portfolio-options-simple?portfolioId=${portfolioId}`],
-    enabled: !!portfolioId,
+    enabled: !!portfolioId && !isGuest,
   });
+  
+  // Use guest options for guests, API data for authenticated users
+  const actualOptionHoldings = isGuest ? guestOptions : optionHoldings;
 
   const { data: riskMetrics = {}, isLoading: riskLoading, refetch: refetchRisk } = useQuery<any>({
     queryKey: [`/api/portfolio-risk-simple?portfolioId=${portfolioId}`],
@@ -478,7 +514,7 @@ export default function Dashboard() {
               <Button 
                 variant="secondary"
                 onClick={() => handleExportData()}
-                disabled={!stockHoldings?.length && !optionHoldings?.length}
+                disabled={!actualStockHoldings?.length && !actualOptionHoldings?.length}
               >
                 <Download className="mr-2 h-4 w-4" />
                 导出数据
@@ -487,13 +523,13 @@ export default function Dashboard() {
 
             {/* Holdings Tables */}
             <HoldingsTable holdings={actualStockHoldings || []} portfolioId={portfolioId || ''} />
-            <OptionsTable holdings={optionHoldings || []} portfolioId={portfolioId || ''} />
+            <OptionsTable holdings={actualOptionHoldings || []} portfolioId={portfolioId || ''} />
           </TabsContent>
 
           <TabsContent value="charts">
             <PortfolioCharts 
-              stockHoldings={stockHoldings || []} 
-              optionHoldings={optionHoldings || []}
+              stockHoldings={actualStockHoldings || []} 
+              optionHoldings={actualOptionHoldings || []}
               riskMetrics={riskMetrics}
               portfolio={portfolio}
             />
@@ -501,8 +537,8 @@ export default function Dashboard() {
 
           <TabsContent value="analysis">
             <RiskAnalysis 
-              stockHoldings={stockHoldings || []} 
-              optionHoldings={optionHoldings || []}
+              stockHoldings={actualStockHoldings || []} 
+              optionHoldings={actualOptionHoldings || []}
               riskMetrics={riskMetrics}
             />
           </TabsContent>

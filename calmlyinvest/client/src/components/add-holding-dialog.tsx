@@ -114,6 +114,49 @@ export function AddHoldingDialog({ open, onOpenChange, type, portfolioId }: AddH
       throw error;
     }
   };
+
+  // Helper function to save option to localStorage for guest mode
+  const saveOptionToLocalStorage = (optionData: any) => {
+    try {
+      const stored = localStorage.getItem('guest_options');
+      const allOptions = stored ? JSON.parse(stored) : {};
+      
+      // Calculate derived values
+      const contracts = parseFloat(optionData.contracts);
+      const currentPrice = parseFloat(optionData.currentPrice || optionData.costPrice);
+      const costPrice = parseFloat(optionData.costPrice);
+      
+      const newOption = {
+        id: `option-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        portfolioId: optionData.portfolioId,
+        optionSymbol: optionData.optionSymbol,
+        underlyingSymbol: optionData.underlyingSymbol,
+        optionType: optionData.optionType,
+        direction: optionData.direction,
+        contracts: optionData.contracts,
+        strikePrice: optionData.strikePrice,
+        expirationDate: optionData.expirationDate.toISOString(),
+        costPrice: optionData.costPrice,
+        currentPrice: optionData.currentPrice || optionData.costPrice,
+        deltaValue: optionData.deltaValue || '0',
+        marketValue: (contracts * currentPrice * 100).toFixed(2), // Options are per 100 shares
+        unrealizedPnl: ((currentPrice - costPrice) * contracts * 100).toFixed(2),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      
+      if (!allOptions[portfolioId]) {
+        allOptions[portfolioId] = [];
+      }
+      allOptions[portfolioId].push(newOption);
+      
+      localStorage.setItem('guest_options', JSON.stringify(allOptions));
+      return newOption;
+    } catch (error) {
+      console.error('Error saving option to localStorage:', error);
+      throw error;
+    }
+  };
   
   // Don't render if no portfolioId
   if (!portfolioId) {
@@ -238,12 +281,26 @@ export function AddHoldingDialog({ open, onOpenChange, type, portfolioId }: AddH
         ...data,
         currentPrice: data.costPrice
       };
-      const response = await apiRequest("POST", `/api/portfolio/${portfolioId}/options`, finalData);
-      return response.json();
+      
+      if (isGuest) {
+        // 访客模式：直接保存到 localStorage
+        return saveOptionToLocalStorage(finalData);
+      } else {
+        // 认证模式：调用 API
+        const response = await apiRequest("POST", `/api/portfolio/${portfolioId}/options`, finalData);
+        return response.json();
+      }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/portfolio/${portfolioId}/options`] });
-      queryClient.invalidateQueries({ queryKey: [`/api/portfolio/${portfolioId}/risk`] });
+      if (isGuest) {
+        // 访客模式：触发页面刷新
+        window.dispatchEvent(new CustomEvent('guestOptionsUpdated'));
+      } else {
+        // 认证模式：清除查询缓存
+        queryClient.invalidateQueries({ queryKey: [`/api/portfolio/${portfolioId}/options`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/portfolio/${portfolioId}/risk`] });
+      }
+      
       toast({
         title: "添加成功",
         description: "期权持仓已添加到投资组合",
