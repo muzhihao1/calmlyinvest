@@ -72,9 +72,10 @@ interface AddHoldingDialogProps {
 export function AddHoldingDialog({ open, onOpenChange, type, portfolioId }: AddHoldingDialogProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const { isGuest } = useAuth();
+  const { isGuest, user } = useAuth();
   
   console.log("AddHoldingDialog rendered, open:", open, "type:", type, "portfolioId:", portfolioId);
+  console.log("AddHoldingDialog auth state: isGuest =", isGuest, "user =", user);
   
   // Helper function to save stock to localStorage for guest mode
   const saveStockToLocalStorage = (stockData: any) => {
