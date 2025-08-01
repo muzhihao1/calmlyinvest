@@ -39,7 +39,7 @@ export async function apiRequest(
   // Handle guest mode requests with localStorage
   if (guestMode) {
     // Handle stock-related requests for guest mode
-    if (url.includes('portfolio-stocks-simple')) {
+    if (url.includes('portfolio-stocks-simple') || url.includes('portfolio-stocks-add')) {
       const portfolioId = extractPortfolioId(url) || 'demo-portfolio-1';
       
       if (method === 'GET') {
@@ -153,7 +153,7 @@ export const getQueryFn: <T>(options: {
     // Handle guest mode requests with localStorage
     if (isGuestMode) {
       // Handle stock-related requests for guest mode
-      if (url.includes('portfolio-stocks-simple')) {
+      if (url.includes('portfolio-stocks-simple') || url.includes('portfolio-stocks-add')) {
         const portfolioId = extractPortfolioId(url) || 'demo-portfolio-1';
         const stocks = guestStorage.getPortfolioStocks(portfolioId);
         return stocks as T;
@@ -175,7 +175,7 @@ export const getQueryFn: <T>(options: {
       headers["Authorization"] = "Bearer guest-mode";
       
       // If no session, also handle as guest mode for stocks/options
-      if (url.includes('portfolio-stocks-simple')) {
+      if (url.includes('portfolio-stocks-simple') || url.includes('portfolio-stocks-add')) {
         const portfolioId = extractPortfolioId(url) || 'demo-portfolio-1';
         const stocks = guestStorage.getPortfolioStocks(portfolioId);
         return stocks as T;
