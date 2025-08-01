@@ -27,16 +27,16 @@ export default function Dashboard() {
   const [addDialogType, setAddDialogType] = useState<"stock" | "option">("stock");
   const [csvImportOpen, setCsvImportOpen] = useState(false);
   const { toast } = useToast();
-  const { user, signOut, isGuest } = useAuth();
+  const { user, signOut, isGuest, session, loading: authLoading } = useAuth();
 
   // Get userId from Supabase user or use guest mode
   const userId = user?.id || "guest-user";
   const isLoggedIn = !isGuest && !!user;
   
   // Fetch user's portfolios (API handles portfolio creation automatically)
-  const { data: portfolios = [], isLoading: portfoliosLoading } = useQuery<Portfolio[]>({
+  const { data: portfolios = [], isLoading: portfoliosLoading, error: portfoliosError } = useQuery<Portfolio[]>({
     queryKey: [`/api/user-portfolios-simple?userId=${userId}`],
-    enabled: !!userId && !isGuest, // Only enabled for authenticated users
+    enabled: !!userId && !isGuest && !authLoading, // Only enabled for authenticated users after auth is ready
   });
   
   // Use the first portfolio or demo portfolio for guests
@@ -48,7 +48,10 @@ export default function Dashboard() {
     portfoliosLength: portfolios.length,
     portfolioId,
     isLoggedIn,
-    portfoliosLoading
+    portfoliosLoading,
+    portfoliosError,
+    session,
+    user
   });
   
 
@@ -394,8 +397,8 @@ export default function Dashboard() {
     });
   };
 
-  // In guest mode, don't wait for API loading states
-  if (!isGuest && (portfolioLoading || stocksLoading || optionsLoading || riskLoading)) {
+  // Show loading state while auth is loading or (for authenticated users) while data is loading
+  if (authLoading || (!isGuest && (portfolioLoading || stocksLoading || optionsLoading || riskLoading))) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">

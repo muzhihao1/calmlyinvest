@@ -3,8 +3,8 @@ import { createClient } from '@supabase/supabase-js';
 
 // Initialize Supabase client
 const supabaseUrl = process.env.SUPABASE_URL!;
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 // In-memory storage for guest mode (shared between functions)
 const guestStocks: Record<string, any[]> = {};
@@ -41,16 +41,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         
         const token = authHeader.replace('Bearer ', '');
         
-        // Verify the user with Supabase
-        const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+        // Create authenticated Supabase client with user's token
+        const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+          global: {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          }
+        });
+        
+        // Verify the user
+        const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
         
         if (authError || !user) {
           res.status(401).json({ error: 'Invalid token' });
           return;
         }
         
+        // Use service role client for database operations (bypasses RLS)
+        const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+        
         // Get stocks for this portfolio
-        const { data: stocks, error: fetchError } = await supabase
+        const { data: stocks, error: fetchError } = await supabaseAdmin
           .from('stock_holdings')
           .select('*')
           .eq('portfolio_id', portfolioId)
@@ -100,13 +112,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         
         const token = authHeader.replace('Bearer ', '');
         
-        // Verify the user with Supabase
-        const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+        // Create authenticated Supabase client with user's token
+        const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+          global: {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          }
+        });
+        
+        // Verify the user
+        const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
         
         if (authError || !user) {
           res.status(401).json({ error: 'Invalid token' });
           return;
         }
+        
+        // Use service role client for database operations (bypasses RLS)
+        const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
         
         // Create new stock holding
         const newStock = {
@@ -121,7 +145,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           unrealized_pnl: (parseFloat(stockData.currentPrice || stockData.costPrice) - parseFloat(stockData.costPrice)) * parseFloat(stockData.quantity)
         };
         
-        const { data: insertedStock, error: insertError } = await supabase
+        const { data: insertedStock, error: insertError } = await supabaseAdmin
           .from('stock_holdings')
           .insert([newStock])
           .select()

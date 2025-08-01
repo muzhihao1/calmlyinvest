@@ -6,9 +6,6 @@ const supabaseUrl = process.env.SUPABASE_URL!;
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
-// Use service role key for server-side operations
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Set CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -60,8 +57,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Extract token
     const token = authHeader.replace('Bearer ', '');
     
-    // Verify the user with Supabase using the token
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    // Create authenticated Supabase client with user's token
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    });
+    
+    // Verify the user
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
     
     if (authError || !user || user.id !== userId) {
       console.error('Auth error:', authError);
@@ -69,8 +75,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return;
     }
     
+    // Use service role client for database operations (bypasses RLS)
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+    
     // Fetch portfolios for the authenticated user
-    const { data: portfolios, error: fetchError } = await supabase
+    const { data: portfolios, error: fetchError } = await supabaseAdmin
       .from('portfolios')
       .select('*')
       .eq('user_id', userId)
@@ -92,7 +101,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         margin_used: '0'
       };
       
-      const { data: newPortfolio, error: createError } = await supabase
+      const { data: newPortfolio, error: createError } = await supabaseAdmin
         .from('portfolios')
         .insert([defaultPortfolio])
         .select()

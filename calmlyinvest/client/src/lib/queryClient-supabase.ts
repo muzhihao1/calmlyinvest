@@ -143,9 +143,15 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const { data: { session } } = await supabase.auth.getSession();
-    const headers: HeadersInit = {};
     const url = queryKey[0] as string;
+    console.log('QueryFn - Fetching:', url);
+    
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    console.log('QueryFn - Session:', session);
+    console.log('QueryFn - Session error:', sessionError);
+    console.log('QueryFn - Access token:', session?.access_token?.substring(0, 20) + '...');
+    
+    const headers: HeadersInit = {};
     
     // Check if in guest mode - if URL contains guest-user or demo portfolio
     const isGuestMode = url.includes('guest-user') || url.includes('demo-portfolio');
