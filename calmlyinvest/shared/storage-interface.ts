@@ -41,6 +41,7 @@ export interface StorageInterface {
   updateRiskSettings(userId: string, data: InsertRiskSettings, req?: any): Promise<RiskSettings>;
 
   // Risk metrics methods
+  getRiskMetrics(portfolioId: string, req?: any): Promise<RiskMetrics | undefined>;
   createRiskMetrics(data: any, req?: any): Promise<RiskMetrics>;
   getRiskHistory?(portfolioId: string, limit?: number, req?: any): Promise<RiskHistory[]>;
 }

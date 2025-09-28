@@ -3,7 +3,7 @@ import { setCorsHeaders, sendSuccess, sendError } from '../../_utils/response';
 import { requireAuth } from '../../_utils/auth';
 import { getStorage } from '../../_utils/storage';
 import { verifyPortfolioAccess } from '../../_utils/portfolio-auth';
-import { updateStockPrices, updateOptionPrices } from '../../../server/market-data';
+import { updateStockPrices, updateOptionPrices } from '../../_utils/market-data';
 
 /**
  * Refresh market prices for portfolio holdings

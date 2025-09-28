@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { setCorsHeaders, sendSuccess, sendError } from '../../_utils/response';
 import { requireAuth } from '../../_utils/auth';
-import { getMarketDataProvider } from '../../../server/market-data';
+import { getMarketDataProvider } from '../../_utils/market-data';
 
 /**
  * Get stock quote by symbol

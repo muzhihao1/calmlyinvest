@@ -93,6 +93,14 @@ class SupabaseStorageAdapter implements StorageInterface {
     return convertDatesToStrings(result);
   }
 
+  async getRiskMetrics(portfolioId: string, req?: any) {
+    const result = await this.storage.getRiskMetrics(portfolioId);
+    if (!result) {
+      return undefined;
+    }
+    return convertDatesToStrings(result);
+  }
+
   async createRiskMetrics(data: any, req?: any) {
     const result = await this.storage.createRiskMetrics(data);
     return convertDatesToStrings(result);

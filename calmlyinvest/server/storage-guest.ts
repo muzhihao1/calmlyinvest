@@ -237,6 +237,23 @@ export const guestStorage = {
   },
 
   // Risk metrics methods
+  async getRiskMetrics(portfolioId: string): Promise<RiskMetrics | undefined> {
+    if (portfolioId !== "demo-portfolio-1") {
+      return undefined;
+    }
+
+    return {
+      id: "demo-metrics-1",
+      portfolioId,
+      leverageRatio: "0.80",
+      portfolioBeta: "1.05",
+      maxConcentration: "0.25",
+      marginUsageRatio: "0.10",
+      riskLevel: "GREEN",
+      calculatedAt: new Date().toISOString(),
+    };
+  },
+
   async createRiskMetrics(data: any): Promise<RiskMetrics> {
     // Return mock metrics for demo
     return {
