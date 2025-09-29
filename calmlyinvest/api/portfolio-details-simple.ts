@@ -20,6 +20,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const user = authResult;
 
   const portfolioId = (req.query.portfolioId || req.body?.portfolioId) as string;
+  console.log("portfolio-details-simple request", { userId: user.id, portfolioId, method: req.method });
   if (!portfolioId) {
     sendError(res, "Portfolio ID is required", 400);
     return;
