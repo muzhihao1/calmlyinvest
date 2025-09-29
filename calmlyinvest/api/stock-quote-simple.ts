@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { setCorsHeaders, sendSuccess, sendError } from "./_utils/response";
-import { getMarketDataProvider } from "./_utils/market-data";
+import { setCorsHeaders, sendSuccess, sendError } from "./_utils/response.js";
+import { getMarketDataProvider } from "./_utils/market-data.js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   setCorsHeaders(res, req);

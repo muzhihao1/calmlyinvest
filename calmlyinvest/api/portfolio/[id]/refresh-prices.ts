@@ -1,9 +1,9 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { setCorsHeaders, sendSuccess, sendError } from '../../_utils/response';
-import { requireAuth } from '../../_utils/auth';
-import { getStorage } from '../../_utils/storage';
-import { verifyPortfolioAccess } from '../../_utils/portfolio-auth';
-import { updateStockPrices, updateOptionPrices } from '../../_utils/market-data';
+import { setCorsHeaders, sendSuccess, sendError } from '../../_utils/response.js';
+import { requireAuth } from '../../_utils/auth.js';
+import { getStorage } from '../../_utils/storage.js';
+import { verifyPortfolioAccess } from '../../_utils/portfolio-auth.js';
+import { updateStockPrices, updateOptionPrices } from '../../_utils/market-data.js';
 
 /**
  * Refresh market prices for portfolio holdings

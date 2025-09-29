@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { setCorsHeaders, sendSuccess, sendError, handleValidationError } from '../../_utils/response';
-import { requireAuth } from '../../_utils/auth';
-import { getStorage } from '../../_utils/storage';
+import { setCorsHeaders, sendSuccess, sendError, handleValidationError } from '../../_utils/response.js';
+import { requireAuth } from '../../_utils/auth.js';
+import { getStorage } from '../../_utils/storage.js';
 import { insertRiskSettingsSchema } from '../../../shared/schema-supabase';
 import { z } from 'zod';
 

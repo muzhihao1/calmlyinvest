@@ -1,5 +1,5 @@
-import { StorageInterface } from '../../shared/storage-interface';
-import { User } from './auth';
+import { StorageInterface } from '../../shared/storage-interface.js';
+import { User } from './auth.js';
 
 /**
  * Check if user is authorized to access a portfolio
