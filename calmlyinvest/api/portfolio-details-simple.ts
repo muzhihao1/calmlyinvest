@@ -26,6 +26,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   if (user.id === "guest-user" && portfolioId === "demo-portfolio-1") {
+    console.log("portfolio-details-simple guest request", { method: req.method, portfolioId });
     if (req.method === "GET") {
       sendSuccess(res, {
         id: "demo-portfolio-1",
