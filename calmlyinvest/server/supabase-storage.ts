@@ -28,6 +28,34 @@ export class SupabaseStorage {
     };
   }
 
+  private mapStockHolding(data: any): schema.StockHolding | null {
+    if (!data) return null;
+    return {
+      id: data.id,
+      portfolioId: data.portfolio_id || data.portfolioId,
+      symbol: data.symbol,
+      name: data.name,
+      quantity: data.quantity,
+      costPrice: data.cost_price || data.costPrice,
+      currentPrice: data.current_price ?? data.currentPrice ?? null,
+      beta: data.beta ?? null,
+      createdAt: data.created_at || data.createdAt,
+      updatedAt: data.updated_at || data.updatedAt,
+    } as schema.StockHolding;
+  }
+
+  private toDbStockHolding(holding: schema.InsertStockHolding) {
+    return {
+      portfolio_id: holding.portfolioId,
+      symbol: holding.symbol,
+      name: holding.name ?? null,
+      quantity: holding.quantity,
+      cost_price: holding.costPrice,
+      current_price: holding.currentPrice ?? null,
+      beta: holding.beta ?? null,
+    };
+  }
+
   // Portfolio operations
   async getPortfolios(userId: string): Promise<schema.Portfolio[]> {
     const { data, error } = await this.supabase
@@ -107,30 +135,40 @@ export class SupabaseStorage {
       .eq('portfolio_id', portfolioId);
 
     if (error) throw error;
-    return data || [];
+    return (data || []).map((row) => this.mapStockHolding(row)!) as schema.StockHolding[];
   }
 
   async createStockHolding(holding: schema.InsertStockHolding): Promise<schema.StockHolding> {
+    const dbHolding = this.toDbStockHolding(holding);
+
     const { data, error } = await this.supabase
       .from('stock_holdings')
-      .insert(holding)
+      .insert(dbHolding)
       .select()
       .single();
 
     if (error) throw error;
-    return data;
+    return this.mapStockHolding(data)!;
   }
 
   async updateStockHolding(id: string, updates: Partial<schema.StockHolding>): Promise<schema.StockHolding> {
+    const dbUpdates: Record<string, any> = {};
+    if (updates.symbol !== undefined) dbUpdates.symbol = updates.symbol;
+    if (updates.name !== undefined) dbUpdates.name = updates.name;
+    if (updates.quantity !== undefined) dbUpdates.quantity = updates.quantity;
+    if (updates.costPrice !== undefined) dbUpdates.cost_price = updates.costPrice;
+    if (updates.currentPrice !== undefined) dbUpdates.current_price = updates.currentPrice;
+    if (updates.beta !== undefined) dbUpdates.beta = updates.beta;
+
     const { data, error } = await this.supabase
       .from('stock_holdings')
-      .update(updates)
+      .update(dbUpdates)
       .eq('id', id)
       .select()
       .single();
 
     if (error) throw error;
-    return data;
+    return this.mapStockHolding(data)!;
   }
 
   async deleteStockHolding(id: string): Promise<boolean> {
@@ -155,9 +193,21 @@ export class SupabaseStorage {
   }
 
   async createOptionHolding(holding: schema.InsertOptionHolding): Promise<schema.OptionHolding> {
+    const dbHolding = {
+      portfolio_id: holding.portfolioId,
+      option_symbol: holding.optionSymbol,
+      underlying_symbol: holding.underlyingSymbol,
+      option_type: holding.optionType,
+      direction: holding.direction,
+      contracts: holding.contracts,
+      strike_price: holding.strikePrice,
+      expiration_date: holding.expirationDate,
+      cost_price: holding.costPrice,
+    };
+
     const { data, error } = await this.supabase
       .from('option_holdings')
-      .insert(holding)
+      .insert(dbHolding)
       .select()
       .single();
 
@@ -166,9 +216,19 @@ export class SupabaseStorage {
   }
 
   async updateOptionHolding(id: string, updates: Partial<schema.OptionHolding>): Promise<schema.OptionHolding> {
+    const dbUpdates: Record<string, any> = {};
+    if (updates.optionSymbol !== undefined) dbUpdates.option_symbol = updates.optionSymbol;
+    if (updates.underlyingSymbol !== undefined) dbUpdates.underlying_symbol = updates.underlyingSymbol;
+    if (updates.optionType !== undefined) dbUpdates.option_type = updates.optionType;
+    if (updates.direction !== undefined) dbUpdates.direction = updates.direction;
+    if (updates.contracts !== undefined) dbUpdates.contracts = updates.contracts;
+    if (updates.strikePrice !== undefined) dbUpdates.strike_price = updates.strikePrice;
+    if (updates.expirationDate !== undefined) dbUpdates.expiration_date = updates.expirationDate;
+    if (updates.costPrice !== undefined) dbUpdates.cost_price = updates.costPrice;
+
     const { data, error } = await this.supabase
       .from('option_holdings')
-      .update(updates)
+      .update(dbUpdates)
       .eq('id', id)
       .select()
       .single();
