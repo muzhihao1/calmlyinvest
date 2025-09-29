@@ -11,6 +11,6 @@
   "routes": [
     { "handle": "filesystem" },
     { "src": "/api/(.*)", "dest": "calmlyinvest/api/$1.ts" },
-    { "src": "/(.*)", "dest": "calmlyinvest/dist/public/index.html", "status": 200 }
+    { "src": "/(.*)", "dest": "calmlyinvest/dist/public/index.html" }
   ]
 }
