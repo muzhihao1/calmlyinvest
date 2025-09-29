@@ -25,6 +25,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return;
   }
 
+  if (user.id === "guest-user" && portfolioId === "demo-portfolio-1") {
+    if (req.method === "GET") {
+      sendSuccess(res, {
+        id: "demo-portfolio-1",
+        userId: "guest-user",
+        name: "Demo Portfolio",
+        totalEquity: "10000.00",
+        cashBalance: "5000.00",
+        marginUsed: "0.00",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+    } else if (req.method === "PUT") {
+      sendError(res, "Guest portfolio cannot be modified", 403);
+    } else if (req.method === "DELETE") {
+      sendError(res, "Guest portfolio cannot be deleted", 403);
+    } else {
+      sendError(res, "Method not allowed", 405);
+    }
+    return;
+  }
+
   const storage = await getStorage(user, req);
 
   try {
