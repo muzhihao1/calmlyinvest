@@ -1,6 +1,6 @@
 // Script to bulk import holdings from Robinhood to CalmlyInvest
 const portfolioId = '186ecd89-e268-43c4-b3d5-3441a2082cf5';
-const apiUrl = 'http://localhost:5001/api/portfolio-bulk-import'; // Change to production URL if needed
+const apiUrl = 'https://calmlyinvest.vercel.app/api/portfolio-bulk-import';
 
 const stocks = [
   { symbol: 'AMZN', name: 'Amazon', quantity: 30, cost_price: 222.17, current_price: 218.58, beta: 1.2 },
