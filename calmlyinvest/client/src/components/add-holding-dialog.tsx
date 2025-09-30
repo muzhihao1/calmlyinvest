@@ -73,9 +73,9 @@ export function AddHoldingDialog({ open, onOpenChange, type, portfolioId }: AddH
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { isGuest } = useAuth();
-  
+
   console.log("AddHoldingDialog rendered, open:", open, "type:", type, "portfolioId:", portfolioId);
-  
+
   // Helper function to save stock to localStorage for guest mode
   const saveStockToLocalStorage = (stockData: any) => {
     try {
@@ -157,12 +157,8 @@ export function AddHoldingDialog({ open, onOpenChange, type, portfolioId }: AddH
       throw error;
     }
   };
-  
-  // Don't render if no portfolioId
-  if (!portfolioId) {
-    return null;
-  }
 
+  // Always initialize hooks to comply with Rules of Hooks
   const stockForm = useForm<z.infer<typeof stockFormSchema>>({
     resolver: zodResolver(stockFormSchema),
     defaultValues: {
@@ -339,6 +335,11 @@ export function AddHoldingDialog({ open, onOpenChange, type, portfolioId }: AddH
     optionForm.reset();
     onOpenChange(false);
   };
+
+  // Safe to return null after all hooks have been called
+  if (!portfolioId) {
+    return null;
+  }
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>

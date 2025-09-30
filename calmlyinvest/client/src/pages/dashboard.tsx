@@ -38,7 +38,35 @@ export default function Dashboard() {
     queryKey: [`/api/user-portfolios-simple?userId=${userId}`],
     enabled: !!userId && !isGuest && !authLoading, // Only enabled for authenticated users after auth is ready
   });
-  
+
+  // Auto-create portfolio for logged-in users without one
+  const createPortfolioMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/portfolios", {
+        userId,
+        name: "我的投资组合",
+        totalEquity: "10000",
+        cashBalance: "10000",
+        marginUsed: "0"
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/user-portfolios-simple?userId=${userId}`] });
+      toast({
+        title: "投资组合已创建",
+        description: "系统已为您创建默认投资组合",
+      });
+    },
+  });
+
+  // Automatically create portfolio if logged-in user has none
+  useEffect(() => {
+    if (!isGuest && !portfoliosLoading && portfolios.length === 0 && userId && !createPortfolioMutation.isPending) {
+      createPortfolioMutation.mutate();
+    }
+  }, [isGuest, portfoliosLoading, portfolios.length, userId]);
+
   // Use the first portfolio or demo portfolio for guests
   const portfolioId = portfolios[0]?.id || (isGuest ? "demo-portfolio-1" : null);
   
