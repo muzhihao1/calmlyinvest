@@ -283,7 +283,7 @@ export function AddHoldingDialog({ open, onOpenChange, type, portfolioId }: AddH
         return saveOptionToLocalStorage(finalData);
       } else {
         // 认证模式：调用 API
-        const response = await apiRequest("POST", `/api/portfolio/${portfolioId}/options`, finalData);
+        const response = await apiRequest("POST", `/api/portfolio-options-add?portfolioId=${portfolioId}`, finalData);
         return response.json();
       }
     },
@@ -293,8 +293,8 @@ export function AddHoldingDialog({ open, onOpenChange, type, portfolioId }: AddH
         window.dispatchEvent(new CustomEvent('guestOptionsUpdated'));
       } else {
         // 认证模式：清除查询缓存
-        queryClient.invalidateQueries({ queryKey: [`/api/portfolio/${portfolioId}/options`] });
-        queryClient.invalidateQueries({ queryKey: [`/api/portfolio/${portfolioId}/risk`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/portfolio-options-simple?portfolioId=${portfolioId}`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/portfolio-risk-simple?portfolioId=${portfolioId}`] });
       }
       
       toast({
