@@ -4,13 +4,13 @@
   "installCommand": "cd calmlyinvest && npm install",
   "buildCommand": "cd calmlyinvest && npm run build",
   "devCommand": "cd calmlyinvest && npm run dev",
+  "outputDirectory": "calmlyinvest/dist/public",
   "builds": [
-    { "src": "calmlyinvest/api/**/*.ts", "use": "@vercel/node" },
-    { "src": "calmlyinvest/dist/public/**/*", "use": "@vercel/static" }
+    { "src": "calmlyinvest/api/**/*.ts", "use": "@vercel/node" }
   ],
   "routes": [
-    { "handle": "filesystem" },
     { "src": "/api/(.*)", "dest": "calmlyinvest/api/$1.ts" },
-    { "src": "/(.*)", "dest": "calmlyinvest/dist/public/index.html" }
+    { "handle": "filesystem" },
+    { "src": "/((?!api).*)", "dest": "/index.html", "status": 200 }
   ]
 }
