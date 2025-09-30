@@ -4,12 +4,11 @@ import { createClient } from '@supabase/supabase-js';
 // Initialize Supabase
 const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables');
 }
-
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Enable CORS
 const allowCors = (handler: (req: VercelRequest, res: VercelResponse) => Promise<void>) => {
@@ -84,12 +83,44 @@ async function handler(req: VercelRequest, res: VercelResponse) {
             return res.status(401).json({ error: 'Authorization required' });
           }
 
-          // Verify the user with Supabase
-          const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+          // Verify the user with Supabase (using anon key + token)
+          const supabaseAuth = createClient(supabaseUrl!, supabaseAnonKey!, {
+            global: {
+              headers: {
+                Authorization: `Bearer ${token}`
+              }
+            }
+          });
+
+          const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
 
           if (authError || !user) {
             console.error('Auth error:', authError);
             return res.status(401).json({ error: 'Invalid token' });
+          }
+
+          // Create admin client to bypass RLS
+          if (!supabaseServiceKey) {
+            console.error('Missing SUPABASE_SERVICE_ROLE_KEY');
+            return res.status(500).json({ error: 'Server configuration error' });
+          }
+
+          const supabaseAdmin = createClient(supabaseUrl!, supabaseServiceKey);
+
+          // Verify portfolio belongs to user
+          const { data: portfolio, error: portfolioError } = await supabaseAdmin
+            .from('portfolios')
+            .select('user_id')
+            .eq('id', portfolioId)
+            .single();
+
+          if (portfolioError || !portfolio) {
+            console.error('Portfolio error:', portfolioError);
+            return res.status(404).json({ error: 'Portfolio not found' });
+          }
+
+          if (portfolio.user_id !== user.id) {
+            return res.status(403).json({ error: 'Access denied' });
           }
 
           // Create new stock holding with proper database field names
@@ -105,7 +136,8 @@ async function handler(req: VercelRequest, res: VercelResponse) {
 
           console.log('Inserting stock:', newStock);
 
-          const { data: insertedStock, error: insertError } = await supabase
+          // Use admin client to bypass RLS
+          const { data: insertedStock, error: insertError } = await supabaseAdmin
             .from('stock_holdings')
             .insert([newStock])
             .select()
@@ -135,16 +167,48 @@ async function handler(req: VercelRequest, res: VercelResponse) {
             return res.status(401).json({ error: 'Authorization required' });
           }
 
-          // Verify the user with Supabase
-          const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+          // Verify the user with Supabase (using anon key + token)
+          const supabaseAuth = createClient(supabaseUrl!, supabaseAnonKey!, {
+            global: {
+              headers: {
+                Authorization: `Bearer ${token}`
+              }
+            }
+          });
+
+          const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
 
           if (authError || !user) {
             console.error('Auth error:', authError);
             return res.status(401).json({ error: 'Invalid token' });
           }
 
-          // Fetch stocks from database
-          const { data: stocks, error: fetchError } = await supabase
+          // Create admin client to bypass RLS
+          if (!supabaseServiceKey) {
+            console.error('Missing SUPABASE_SERVICE_ROLE_KEY');
+            return res.status(500).json({ error: 'Server configuration error' });
+          }
+
+          const supabaseAdmin = createClient(supabaseUrl!, supabaseServiceKey);
+
+          // Verify portfolio belongs to user
+          const { data: portfolio, error: portfolioError } = await supabaseAdmin
+            .from('portfolios')
+            .select('user_id')
+            .eq('id', portfolioId)
+            .single();
+
+          if (portfolioError || !portfolio) {
+            console.error('Portfolio error:', portfolioError);
+            return res.status(404).json({ error: 'Portfolio not found' });
+          }
+
+          if (portfolio.user_id !== user.id) {
+            return res.status(403).json({ error: 'Access denied' });
+          }
+
+          // Fetch stocks from database using admin client
+          const { data: stocks, error: fetchError } = await supabaseAdmin
             .from('stock_holdings')
             .select('*')
             .eq('portfolio_id', portfolioId);
