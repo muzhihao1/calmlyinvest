@@ -1,8 +1,8 @@
 {
-  "name": "calmlyinvest-root",
+  "name": "calmlyinvest-api",
   "version": "1.0.0",
   "private": true,
-  "description": "Root package for Vercel serverless functions",
+  "description": "Vercel serverless functions for CalmlyInvest",
   "dependencies": {
     "@supabase/supabase-js": "^2.50.5",
     "@vercel/node": "^5.3.5"
