@@ -168,11 +168,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       leverageRatio: leverageRatio.toFixed(2),
       portfolioBeta: portfolioBeta.toFixed(2),
       maxConcentration: maxConcentration.toFixed(2),
+      // Support both field naming conventions for compatibility
       marginUsage: marginUsageRatio.toFixed(2),
+      marginUsageRatio: marginUsageRatio.toFixed(2),
       cashRatio: cashRatio.toFixed(2),
+      remainingLiquidity: cashRatio.toFixed(2),
       totalMarketValue: totalMarketValue.toFixed(2),
       totalStockValue: totalStockValue.toFixed(2),
+      stockValue: totalStockValue.toFixed(2), // Alias for frontend compatibility
       totalOptionValue: totalOptionValue.toFixed(2),
+      optionMaxLoss: totalOptionValue.toFixed(2), // Alias for frontend compatibility
       totalEquity: totalEquity.toFixed(2),
       cashBalance: cashBalance.toFixed(2),
       marginUsed: marginUsed.toFixed(2),
