@@ -55,14 +55,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           .select('*')
           .eq('portfolio_id', portfolioId)
           .order('created_at', { ascending: false });
-        
+
         if (fetchError) {
           console.error('Error fetching stocks:', fetchError);
           res.status(500).json({ error: 'Failed to fetch stocks' });
           return;
         }
-        
-        res.status(200).json(stocks || []);
+
+        // Transform snake_case to camelCase for frontend
+        const transformedStocks = (stocks || []).map((stock: any) => ({
+          id: stock.id,
+          portfolioId: stock.portfolio_id,
+          symbol: stock.symbol,
+          name: stock.name,
+          quantity: stock.quantity,
+          costPrice: stock.cost_price,
+          currentPrice: stock.current_price,
+          beta: stock.beta,
+          createdAt: stock.created_at,
+          updatedAt: stock.updated_at
+        }));
+
+        res.status(200).json(transformedStocks);
       }
     } else if (req.method === 'POST') {
       const stockData = req.body;
@@ -126,14 +140,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           .insert([newStock])
           .select()
           .single();
-        
+
         if (insertError) {
           console.error('Error creating stock:', insertError);
           res.status(500).json({ error: 'Failed to create stock' });
           return;
         }
-        
-        res.status(201).json(insertedStock);
+
+        // Transform snake_case to camelCase for frontend
+        const transformedStock = {
+          id: insertedStock.id,
+          portfolioId: insertedStock.portfolio_id,
+          symbol: insertedStock.symbol,
+          name: insertedStock.name,
+          quantity: insertedStock.quantity,
+          costPrice: insertedStock.cost_price,
+          currentPrice: insertedStock.current_price,
+          beta: insertedStock.beta,
+          createdAt: insertedStock.created_at,
+          updatedAt: insertedStock.updated_at
+        };
+
+        res.status(201).json(transformedStock);
       }
     } else {
       res.status(405).json({ error: 'Method not allowed' });
