@@ -530,7 +530,7 @@ export default function Dashboard() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Risk Gauge */}
             <div className="lg:col-span-1">
-              {riskLoading || !actualRiskMetrics ? (
+              {portfoliosLoading || riskLoading || !actualRiskMetrics ? (
                 <div className="bg-slate-800 rounded-xl p-6 border border-gray-700 flex items-center justify-center h-full">
                   <span className="text-gray-500">加载风险数据中...</span>
                 </div>
@@ -544,7 +544,7 @@ export default function Dashboard() {
 
             {/* Key Metrics */}
             <div className="lg:col-span-2">
-              {riskLoading || !actualRiskMetrics ? (
+              {portfoliosLoading || riskLoading || !actualRiskMetrics ? (
                 <div className="bg-slate-800 rounded-xl p-6 border border-gray-700 flex items-center justify-center h-full">
                   <span className="text-gray-500">加载指标中...</span>
                 </div>
@@ -620,7 +620,7 @@ export default function Dashboard() {
               <div className="bg-slate-800 rounded-xl p-4 border border-gray-700">
                 <div className="text-sm text-gray-400">净清算价值</div>
                 <div className="text-2xl font-bold text-white">
-                  {portfolioLoading || !actualPortfolio ? (
+                  {portfoliosLoading || portfolioLoading || !actualPortfolio ? (
                     <span className="text-gray-500">加载中...</span>
                   ) : (
                     `$${parseFloat(actualPortfolio.totalEquity || "0").toLocaleString()}`
@@ -630,7 +630,7 @@ export default function Dashboard() {
               <div className="bg-slate-800 rounded-xl p-4 border border-gray-700">
                 <div className="text-sm text-gray-400">市场价值</div>
                 <div className="text-2xl font-bold text-white">
-                  {riskLoading || !actualRiskMetrics ? (
+                  {portfoliosLoading || riskLoading || !actualRiskMetrics ? (
                     <span className="text-gray-500">加载中...</span>
                   ) : (
                     `$${parseFloat(actualRiskMetrics.stockValue || "0").toLocaleString()}`
@@ -640,7 +640,7 @@ export default function Dashboard() {
               <div className="bg-slate-800 rounded-xl p-4 border border-gray-700">
                 <div className="text-sm text-gray-400">维持保证金</div>
                 <div className="text-2xl font-bold text-yellow-500">
-                  {portfolioLoading || !actualPortfolio ? (
+                  {portfoliosLoading || portfolioLoading || !actualPortfolio ? (
                     <span className="text-gray-500">加载中...</span>
                   ) : (
                     `$${parseFloat(actualPortfolio.marginUsed || "0").toLocaleString()}`
