@@ -346,6 +346,18 @@ export default function Dashboard() {
     }
   };
 
+  // Initial refresh when portfolio loads (to calculate total_equity)
+  useEffect(() => {
+    if (!portfolioId || isGuest) return;
+
+    // Trigger a silent refresh on first load to ensure total_equity is calculated
+    const timer = setTimeout(() => {
+      handleRefresh(true); // Silent refresh after 1 second
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [portfolioId, isGuest]); // Only run when portfolioId changes
+
   // Auto-refresh every 5 minutes (silent mode to avoid notification spam)
   useEffect(() => {
     if (!portfolioId || !refetchRisk) return;

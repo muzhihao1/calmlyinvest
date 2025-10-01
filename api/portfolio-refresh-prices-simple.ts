@@ -241,13 +241,50 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Execute all updates in parallel
     await Promise.all([...stockUpdatePromises, ...optionUpdatePromises]);
 
+    // Calculate and update portfolio total_equity
+    // Fetch updated holdings to get current prices
+    const { data: updatedStocks } = await supabaseAdmin
+      .from('stock_holdings')
+      .select('*')
+      .eq('portfolio_id', portfolioId);
+
+    const { data: updatedOptions } = await supabaseAdmin
+      .from('option_holdings')
+      .select('*')
+      .eq('portfolio_id', portfolioId);
+
+    // Calculate total stock value
+    const totalStockValue = (updatedStocks || []).reduce((sum: number, stock: any) => {
+      return sum + (stock.quantity * parseFloat(stock.current_price || '0'));
+    }, 0);
+
+    // Calculate total option value (contracts * price * 100)
+    const totalOptionValue = (updatedOptions || []).reduce((sum: number, option: any) => {
+      return sum + (option.contracts * parseFloat(option.current_price || '0') * 100);
+    }, 0);
+
+    // Calculate total equity = stock value + option value + cash - margin
+    const cashBalance = parseFloat(portfolio.cash_balance || '0');
+    const marginUsed = parseFloat(portfolio.margin_used || '0');
+    const totalEquity = totalStockValue + totalOptionValue + cashBalance - marginUsed;
+
+    // Update portfolio total_equity
+    await supabaseAdmin
+      .from('portfolios')
+      .update({
+        total_equity: totalEquity.toFixed(2),
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', portfolioId);
+
     res.status(200).json({
       success: true,
       stocksUpdated,
       optionsUpdated,
       totalStocks: (stocks || []).length,
       totalOptions: (options || []).length,
-      message: `Successfully refreshed ${stocksUpdated} stock prices and ${optionsUpdated} option prices`,
+      totalEquity: totalEquity.toFixed(2),
+      message: `Successfully refreshed ${stocksUpdated} stock prices and ${optionsUpdated} option prices. Total equity: $${totalEquity.toFixed(2)}`,
       timestamp: new Date().toISOString()
     });
   } catch (error) {

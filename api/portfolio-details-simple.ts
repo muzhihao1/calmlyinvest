@@ -91,12 +91,40 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(403).json({ error: 'Access denied' });
       }
 
+      // Dynamically calculate total_equity from holdings
+      // Fetch stock holdings
+      const { data: stocks } = await supabaseAdmin
+        .from('stock_holdings')
+        .select('quantity, current_price')
+        .eq('portfolio_id', portfolioId);
+
+      // Fetch option holdings
+      const { data: options } = await supabaseAdmin
+        .from('option_holdings')
+        .select('contracts, current_price')
+        .eq('portfolio_id', portfolioId);
+
+      // Calculate total stock value
+      const totalStockValue = (stocks || []).reduce((sum: number, stock: any) => {
+        return sum + (stock.quantity * parseFloat(stock.current_price || '0'));
+      }, 0);
+
+      // Calculate total option value (contracts * price * 100)
+      const totalOptionValue = (options || []).reduce((sum: number, option: any) => {
+        return sum + (option.contracts * parseFloat(option.current_price || '0') * 100);
+      }, 0);
+
+      // Calculate total equity = stock value + option value + cash - margin
+      const cashBalance = parseFloat(portfolio.cash_balance || '0');
+      const marginUsed = parseFloat(portfolio.margin_used || '0');
+      const calculatedTotalEquity = totalStockValue + totalOptionValue + cashBalance - marginUsed;
+
       // Transform snake_case to camelCase for frontend
       const transformedPortfolio = {
         id: portfolio.id,
         userId: portfolio.user_id,
         name: portfolio.name,
-        totalEquity: portfolio.total_equity,
+        totalEquity: calculatedTotalEquity.toFixed(2), // Use calculated value
         cashBalance: portfolio.cash_balance,
         marginUsed: portfolio.margin_used,
         createdAt: portfolio.created_at,
