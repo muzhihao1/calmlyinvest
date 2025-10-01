@@ -450,43 +450,44 @@ export default function Dashboard() {
       <header className="bg-slate-800 border-b border-gray-700 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2 sm:space-x-4">
               <div className="flex items-center">
-                <ChartLine className="text-primary text-2xl mr-3" />
-                <h1 className="text-xl font-bold text-white">智能仓位管家</h1>
+                <ChartLine className="text-primary text-xl sm:text-2xl mr-2 sm:mr-3" />
+                <h1 className="text-lg sm:text-xl font-bold text-white">智能仓位管家</h1>
               </div>
               <span className="text-sm text-gray-400 hidden lg:inline">Stock Portfolio Risk Manager</span>
             </div>
-            
-            <div className="flex items-center space-x-4">
+
+            <div className="flex items-center space-x-2 sm:space-x-4">
               {isLoggedIn ? (
-                <span className="text-sm text-gray-300">
+                <span className="text-xs sm:text-sm text-gray-300 hidden md:inline truncate max-w-[120px] lg:max-w-none">
                   {user?.email}
                 </span>
               ) : (
-                <span className="text-sm text-yellow-400 hidden md:inline">
+                <span className="text-xs sm:text-sm text-yellow-400 hidden md:inline">
                   访客模式 - 数据仅保存在本地
                 </span>
               )}
-              <div className="text-sm text-gray-400 flex items-center">
-                <Clock className="mr-1 h-4 w-4" />
-                最后更新: <span className="ml-1">{formatLastUpdate(lastUpdate)}</span>
+              <div className="text-xs sm:text-sm text-gray-400 items-center hidden sm:flex">
+                <Clock className="mr-1 h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden lg:inline">最后更新: </span>
+                <span className="ml-1">{formatLastUpdate(lastUpdate)}</span>
               </div>
-              
-              <Button onClick={handleRefresh} className="bg-primary hover:bg-blue-600">
-                <RotateCcw className="mr-2 h-4 w-4" />
-                刷新数据
+
+              <Button onClick={handleRefresh} className="bg-primary hover:bg-blue-600 h-9 sm:h-10">
+                <RotateCcw className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">刷新数据</span>
               </Button>
               
-              <Button variant="ghost" size="icon" className="text-gray-400 hover:text-white">
+              <Button variant="ghost" size="icon" className="text-gray-400 hover:text-white h-9 w-9 sm:h-10 sm:w-10">
                 <Settings className="h-5 w-5" />
               </Button>
-              
+
               {isLoggedIn ? (
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="text-gray-400 hover:text-white"
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-gray-400 hover:text-white h-9 w-9 sm:h-10 sm:w-10"
                   onClick={async () => {
                     try {
                       await signOut();
@@ -507,10 +508,10 @@ export default function Dashboard() {
                   <LogOut className="h-5 w-5" />
                 </Button>
               ) : (
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="text-gray-400 hover:text-white"
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-gray-400 hover:text-white h-9 w-9 sm:h-10 sm:w-10"
                   onClick={() => {
                     window.location.href = "/login";
                   }}
@@ -524,15 +525,15 @@ export default function Dashboard() {
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-4 sm:py-6">
         {/* Risk Overview Dashboard */}
-        <div className="mb-8">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="mb-6 sm:mb-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
             {/* Risk Gauge */}
             <div className="lg:col-span-1">
               {portfoliosLoading || riskLoading || !actualRiskMetrics ? (
-                <div className="bg-slate-800 rounded-xl p-6 border border-gray-700 flex items-center justify-center h-full">
-                  <span className="text-gray-500">加载风险数据中...</span>
+                <div className="bg-slate-800 rounded-xl p-4 sm:p-6 border border-gray-700 flex items-center justify-center h-full min-h-[200px] sm:min-h-[240px]">
+                  <span className="text-sm sm:text-base text-gray-500">加载风险数据中...</span>
                 </div>
               ) : (
                 <RiskGauge
@@ -545,11 +546,11 @@ export default function Dashboard() {
             {/* Key Metrics */}
             <div className="lg:col-span-2">
               {portfoliosLoading || riskLoading || !actualRiskMetrics ? (
-                <div className="bg-slate-800 rounded-xl p-6 border border-gray-700 flex items-center justify-center h-full">
-                  <span className="text-gray-500">加载指标中...</span>
+                <div className="bg-slate-800 rounded-xl p-4 sm:p-6 border border-gray-700 flex items-center justify-center h-full min-h-[200px] sm:min-h-[240px]">
+                  <span className="text-sm sm:text-base text-gray-500">加载指标中...</span>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 gap-4 h-full">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 h-full">
                   <MetricsCard
                     title="投资组合Beta值"
                     value={actualRiskMetrics.portfolioBeta || "0.00"}
@@ -616,10 +617,10 @@ export default function Dashboard() {
 
           <TabsContent value="holdings" className="space-y-6">
             {/* Account Summary */}
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
-              <div className="bg-slate-800 rounded-xl p-4 border border-gray-700">
-                <div className="text-sm text-gray-400">净清算价值</div>
-                <div className="text-2xl font-bold text-white">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 mb-6">
+              <div className="bg-slate-800 rounded-xl p-3 sm:p-4 border border-gray-700">
+                <div className="text-xs sm:text-sm text-gray-400">净清算价值</div>
+                <div className="text-xl sm:text-2xl font-bold text-white">
                   {portfoliosLoading || portfolioLoading || !actualPortfolio ? (
                     <span className="text-gray-500">加载中...</span>
                   ) : (
@@ -627,9 +628,9 @@ export default function Dashboard() {
                   )}
                 </div>
               </div>
-              <div className="bg-slate-800 rounded-xl p-4 border border-gray-700">
-                <div className="text-sm text-gray-400">市场价值</div>
-                <div className="text-2xl font-bold text-white">
+              <div className="bg-slate-800 rounded-xl p-3 sm:p-4 border border-gray-700">
+                <div className="text-xs sm:text-sm text-gray-400">市场价值</div>
+                <div className="text-xl sm:text-2xl font-bold text-white">
                   {portfoliosLoading || riskLoading || !actualRiskMetrics ? (
                     <span className="text-gray-500">加载中...</span>
                   ) : (
@@ -637,9 +638,9 @@ export default function Dashboard() {
                   )}
                 </div>
               </div>
-              <div className="bg-slate-800 rounded-xl p-4 border border-gray-700">
-                <div className="text-sm text-gray-400">维持保证金</div>
-                <div className="text-2xl font-bold text-yellow-500">
+              <div className="bg-slate-800 rounded-xl p-3 sm:p-4 border border-gray-700">
+                <div className="text-xs sm:text-sm text-gray-400">维持保证金</div>
+                <div className="text-xl sm:text-2xl font-bold text-yellow-500">
                   {portfoliosLoading || portfolioLoading || !actualPortfolio ? (
                     <span className="text-gray-500">加载中...</span>
                   ) : (
@@ -647,8 +648,8 @@ export default function Dashboard() {
                   )}
                 </div>
               </div>
-              <div className="bg-slate-800 rounded-xl p-4 border border-gray-700">
-                <div className="text-sm text-gray-400 flex items-center">
+              <div className="bg-slate-800 rounded-xl p-3 sm:p-4 border border-gray-700">
+                <div className="text-xs sm:text-sm text-gray-400 flex items-center">
                   现金余额
                   {isGuest && (
                     <Button
@@ -688,22 +689,22 @@ export default function Dashboard() {
                     </Button>
                   </div>
                 ) : portfoliosLoading || portfolioLoading || !actualPortfolio ? (
-                  <div className="text-2xl font-bold text-gray-500">
+                  <div className="text-xl sm:text-2xl font-bold text-gray-500">
                     加载中...
                   </div>
                 ) : (
-                  <div className="text-2xl font-bold text-primary">
+                  <div className="text-xl sm:text-2xl font-bold text-primary">
                     ${parseFloat(actualPortfolio.cashBalance || "0").toLocaleString()}
                   </div>
                 )}
               </div>
               {isGuest && portfolioPerformance && (
-                <div className="bg-slate-800 rounded-xl p-4 border border-gray-700">
-                  <div className="text-sm text-gray-400">总盈亏</div>
-                  <div className={`text-2xl font-bold ${portfolioPerformance.totalPnL >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                <div className="bg-slate-800 rounded-xl p-3 sm:p-4 border border-gray-700">
+                  <div className="text-xs sm:text-sm text-gray-400">总盈亏</div>
+                  <div className={`text-xl sm:text-2xl font-bold ${portfolioPerformance.totalPnL >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                     {portfolioPerformance.totalPnL >= 0 ? '+' : ''}${portfolioPerformance.totalPnL.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </div>
-                  <div className={`text-sm ${portfolioPerformance.totalPnL >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  <div className={`text-xs sm:text-sm ${portfolioPerformance.totalPnL >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                     ({portfolioPerformance.totalPnL >= 0 ? '+' : ''}{portfolioPerformance.totalPnLPercent.toFixed(2)}%)
                   </div>
                 </div>
@@ -711,9 +712,9 @@ export default function Dashboard() {
             </div>
 
             {/* Action Buttons */}
-            <div className="flex flex-wrap gap-3 mb-6">
-              <Button 
-                onClick={() => { 
+            <div className="flex flex-wrap gap-2 sm:gap-3 mb-6">
+              <Button
+                onClick={() => {
                   if (!portfolioId) {
                     toast({
                       title: "请稍候",
@@ -722,17 +723,17 @@ export default function Dashboard() {
                     return;
                   }
                   console.log("添加股票按钮被点击");
-                  setAddDialogType("stock"); 
-                  setAddDialogOpen(true); 
+                  setAddDialogType("stock");
+                  setAddDialogOpen(true);
                 }}
-                className="bg-primary hover:bg-blue-600"
+                className="bg-primary hover:bg-blue-600 h-9 sm:h-10 text-sm"
                 disabled={!portfolioId}
               >
-                <ChartLine className="mr-2 h-4 w-4" />
-                添加股票持仓
+                <ChartLine className="h-4 w-4 sm:mr-2" />
+                <span className="hidden xs:inline sm:inline">添加股票</span>
               </Button>
-              <Button 
-                onClick={() => { 
+              <Button
+                onClick={() => {
                   if (!portfolioId) {
                     toast({
                       title: "请稍候",
@@ -740,30 +741,32 @@ export default function Dashboard() {
                     });
                     return;
                   }
-                  setAddDialogType("option"); 
-                  setAddDialogOpen(true); 
+                  setAddDialogType("option");
+                  setAddDialogOpen(true);
                 }}
-                className="bg-primary hover:bg-blue-600"
+                className="bg-primary hover:bg-blue-600 h-9 sm:h-10 text-sm"
                 disabled={!portfolioId}
               >
-                <Settings className="mr-2 h-4 w-4" />
-                添加期权持仓
+                <Settings className="h-4 w-4 sm:mr-2" />
+                <span className="hidden xs:inline sm:inline">添加期权</span>
               </Button>
-              <Button 
+              <Button
                 variant="secondary"
                 onClick={() => setCsvImportOpen(true)}
                 disabled={!portfolioId}
+                className="h-9 sm:h-10 text-sm"
               >
-                <Upload className="mr-2 h-4 w-4" />
-                导入CSV
+                <Upload className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">导入CSV</span>
               </Button>
-              <Button 
+              <Button
                 variant="secondary"
                 onClick={() => handleExportData()}
                 disabled={!actualStockHoldings?.length && !actualOptionHoldings?.length}
+                className="h-9 sm:h-10 text-sm"
               >
-                <Download className="mr-2 h-4 w-4" />
-                导出数据
+                <Download className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">导出数据</span>
               </Button>
             </div>
 
