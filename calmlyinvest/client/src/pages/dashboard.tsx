@@ -687,9 +687,13 @@ export default function Dashboard() {
                       <X className="h-3 w-3" />
                     </Button>
                   </div>
+                ) : portfoliosLoading || portfolioLoading || !actualPortfolio ? (
+                  <div className="text-2xl font-bold text-gray-500">
+                    加载中...
+                  </div>
                 ) : (
                   <div className="text-2xl font-bold text-primary">
-                    ${parseFloat(actualPortfolio?.cashBalance || "0").toLocaleString()}
+                    ${parseFloat(actualPortfolio.cashBalance || "0").toLocaleString()}
                   </div>
                 )}
               </div>
