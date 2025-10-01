@@ -153,8 +153,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const defaultPortfolio = {
         user_id: userId,
         name: '我的投资组合',
-        total_equity: '1000000',
-        cash_balance: '300000',
+        total_equity: '0',
+        cash_balance: '0',
         margin_used: '0'
       };
       
