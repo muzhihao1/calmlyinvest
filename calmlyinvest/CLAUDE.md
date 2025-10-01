@@ -258,12 +258,29 @@ No automated test suite is currently implemented.
 ## Additional Resources
 
 ### Documentation Files
-- `CURRENT_STATUS.md` - System status and recent updates
-- `DEPLOYMENT.md` - Deployment guide
-- `DEPLOYMENT_CHECKLIST.md` - Pre-deployment checklist
-- `SECURITY_INCIDENT_RESPONSE.md` - Security documentation
-- `SUPABASE_MIGRATION.md` - Database migration guide
-- `TROUBLESHOOTING.md` - Common issues and solutions
+
+All technical documentation is now organized in the `/docs` directory:
+
+**Deployment**:
+- `docs/deployment/deployment-guide.md` - Complete deployment guide
+- `docs/deployment/vercel-setup.md` - Vercel configuration
+
+**Security**:
+- `docs/security/security-checklist.md` - Security checklist
+- `docs/security/incident-response.md` - Security incident response
+- `URGENT_SECURITY_RESPONSE.md` (root) - Current security response
+
+**Development**:
+- `docs/development/supabase-migration.md` - Database migration guide
+- `docs/development/supabase-setup.md` - Supabase setup
+- `docs/development/mcp-setup.md` - MCP server configuration
+- `docs/development/auth-troubleshooting.md` - Authentication troubleshooting
+- `TROUBLESHOOTING.md` (root) - Common issues and solutions
+
+**Archive**:
+- `docs/archive/` - Historical documents and reports
+
+See `docs/README.md` for complete documentation structure
 
 ### Live Demo
 - URL: https://calmlyinvest.vercel.app
