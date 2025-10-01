@@ -348,15 +348,22 @@ export default function Dashboard() {
 
   // Initial refresh when portfolio loads (to calculate total_equity)
   useEffect(() => {
-    if (!portfolioId || isGuest) return;
+    if (!portfolioId || isGuest || portfolioLoading || !portfolio) return;
 
-    // Trigger a silent refresh on first load to ensure total_equity is calculated
-    const timer = setTimeout(() => {
-      handleRefresh(true); // Silent refresh after 1 second
-    }, 1000);
+    // Check if total_equity is 0 or very small (indicates prices not yet loaded)
+    const totalEquity = parseFloat(portfolio.totalEquity || '0');
 
-    return () => clearTimeout(timer);
-  }, [portfolioId, isGuest]); // Only run when portfolioId changes
+    // If portfolio value is 0 but user has holdings, trigger immediate refresh
+    if (totalEquity === 0 || totalEquity < 0.01) {
+      // Small delay to avoid race condition with holdings queries
+      const timer = setTimeout(() => {
+        console.log('Auto-refreshing prices for initial load (totalEquity is 0)');
+        handleRefresh(true); // Silent refresh
+      }, 300); // Reduced from 1000ms to 300ms
+
+      return () => clearTimeout(timer);
+    }
+  }, [portfolio, portfolioId, isGuest, portfolioLoading]); // Run when portfolio data changes
 
   // Auto-refresh every 5 minutes (silent mode to avoid notification spam)
   useEffect(() => {
