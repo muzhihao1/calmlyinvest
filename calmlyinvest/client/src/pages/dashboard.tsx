@@ -719,7 +719,7 @@ export default function Dashboard() {
             </div>
 
             {/* Holdings Tables */}
-            <HoldingsTable holdings={actualStockHoldings || []} portfolioId={portfolioId || ''} />
+            <HoldingsTable holdings={actualStockHoldings || []} portfolioId={portfolioId || ''} isGuest={isGuest} />
             <OptionsTable holdings={actualOptionHoldings || []} portfolioId={portfolioId || ''} />
           </TabsContent>
 

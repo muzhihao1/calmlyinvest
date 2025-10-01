@@ -19,12 +19,13 @@ import type { StockHolding } from "@shared/schema-types";
 interface HoldingsTableProps {
   holdings: StockHolding[];
   portfolioId: string;
+  isGuest?: boolean;
 }
 
 type SortColumn = 'symbol' | 'quantity' | 'costPrice' | 'currentPrice' | 'beta' | 'marketValue' | 'pnl' | 'concentration';
 type SortDirection = 'asc' | 'desc';
 
-export function HoldingsTable({ holdings, portfolioId }: HoldingsTableProps) {
+export function HoldingsTable({ holdings, portfolioId, isGuest = false }: HoldingsTableProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [editingHolding, setEditingHolding] = useState<StockHolding | null>(null);
@@ -32,13 +33,49 @@ export function HoldingsTable({ holdings, portfolioId }: HoldingsTableProps) {
   const [sortColumn, setSortColumn] = useState<SortColumn | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
+  // Delete from localStorage for guest mode
+  const deleteFromLocalStorage = (id: string) => {
+    try {
+      const stored = localStorage.getItem('guest_stocks');
+      const allStocks = stored ? JSON.parse(stored) : {};
+
+      if (allStocks[portfolioId]) {
+        allStocks[portfolioId] = allStocks[portfolioId].filter((stock: StockHolding) => stock.id !== id);
+        localStorage.setItem('guest_stocks', JSON.stringify(allStocks));
+
+        // Dispatch custom event to notify dashboard
+        window.dispatchEvent(new CustomEvent('guestStocksUpdated', {
+          detail: { portfolioId, stocks: allStocks[portfolioId] }
+        }));
+
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Error deleting stock from localStorage:', error);
+      return false;
+    }
+  };
+
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      await apiRequest("DELETE", `/api/stocks/${id}`);
+      if (isGuest) {
+        // Guest mode: delete from localStorage
+        const success = deleteFromLocalStorage(id);
+        if (!success) {
+          throw new Error('Failed to delete from localStorage');
+        }
+        return;
+      } else {
+        // Authenticated mode: call API
+        await apiRequest("DELETE", `/api/stocks/${id}`);
+      }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/portfolio/${portfolioId}/stocks`] });
-      queryClient.invalidateQueries({ queryKey: [`/api/portfolio/${portfolioId}/risk`] });
+      if (!isGuest) {
+        queryClient.invalidateQueries({ queryKey: [`/api/portfolio/${portfolioId}/stocks`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/portfolio/${portfolioId}/risk`] });
+      }
       toast({
         title: "删除成功",
         description: "股票持仓已删除",
