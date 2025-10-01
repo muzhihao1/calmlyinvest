@@ -267,6 +267,24 @@ export default function Dashboard() {
   const actualPortfolio = isGuest ? calculateGuestPortfolio(actualStockHoldings, actualOptionHoldings) : portfolio;
   const portfolioPerformance = isGuest ? calculatePortfolioPerformance(actualStockHoldings, actualOptionHoldings) : null;
 
+  // Diagnostic logging to track loading states
+  console.log('[Dashboard Render State]', {
+    isGuest,
+    portfolioLoading,
+    riskLoading,
+    stocksLoading,
+    optionsLoading,
+    portfoliosLoading,
+    hasPortfolio: !!portfolio,
+    hasActualPortfolio: !!actualPortfolio,
+    hasRiskMetrics: !!riskMetrics,
+    hasActualRiskMetrics: !!actualRiskMetrics,
+    portfolioTotalEquity: portfolio?.totalEquity,
+    actualPortfolioTotalEquity: actualPortfolio?.totalEquity,
+    actualRiskMetricsLeverage: actualRiskMetrics?.leverageRatio,
+    timestamp: new Date().toISOString()
+  });
+
   // Handle cash balance editing
   const handleCashEdit = () => {
     setTempCashValue(guestCashBalance.toString());
