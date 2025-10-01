@@ -73,3 +73,4 @@ SECURITY_KEY_ROTATION_COMPLETE.md
 *.key
 *.pem
 secrets.json
+.vercel

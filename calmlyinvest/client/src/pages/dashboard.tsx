@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -22,10 +22,6 @@ import type { Portfolio, StockHolding, OptionHolding, RiskSettings } from "@shar
 import type { Suggestion } from "@/components/smart-suggestions";
 
 export default function Dashboard() {
-  // Diagnostic: Track render count
-  const renderCount = useRef(0);
-  renderCount.current += 1;
-
   const [lastUpdate, setLastUpdate] = useState(new Date());
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [addDialogType, setAddDialogType] = useState<"stock" | "option">("stock");
@@ -350,73 +346,8 @@ export default function Dashboard() {
     }
   };
 
-  // Initial refresh when portfolio loads (to calculate total_equity)
-  useEffect(() => {
-    console.log('[AutoRefreshEffect] Effect running', {
-      renderCount: renderCount.current,
-      portfolioId,
-      isGuest,
-      portfolioLoading,
-      hasPortfolio: !!portfolio,
-      timestamp: performance.now()
-    });
-
-    if (!portfolioId) {
-      console.log('[AutoRefreshEffect] Early return: no portfolioId');
-      return;
-    }
-    if (isGuest) {
-      console.log('[AutoRefreshEffect] Early return: isGuest mode');
-      return;
-    }
-    if (portfolioLoading) {
-      console.log('[AutoRefreshEffect] Early return: portfolioLoading=true');
-      return;
-    }
-    if (!portfolio) {
-      console.log('[AutoRefreshEffect] Early return: portfolio is null/undefined');
-      return;
-    }
-
-    // Log raw portfolio data
-    console.log('[AutoRefreshEffect] Portfolio data:', {
-      totalEquity_raw: portfolio.totalEquity,
-      totalEquity_type: typeof portfolio.totalEquity,
-      marketValue: portfolio.marketValue,
-      netLiquidation: portfolio.netLiquidation
-    });
-
-    // Normalize totalEquity to number
-    const totalEquityRaw = portfolio.totalEquity;
-    const totalEquity = typeof totalEquityRaw === 'number'
-      ? totalEquityRaw
-      : parseFloat(String(totalEquityRaw || '0'));
-
-    console.log('[AutoRefreshEffect] Normalized totalEquity:', {
-      raw: totalEquityRaw,
-      normalized: totalEquity,
-      isFinite: Number.isFinite(totalEquity),
-      isZero: totalEquity === 0,
-      isSmall: totalEquity < 0.01
-    });
-
-    // If portfolio value is 0 or very small, trigger immediate refresh
-    if (Number.isFinite(totalEquity) && (totalEquity === 0 || totalEquity < 0.01)) {
-      console.log('[AutoRefreshEffect] ✅ Triggering auto-refresh (totalEquity is 0 or < 0.01)');
-
-      const timer = setTimeout(() => {
-        console.log('[AutoRefreshEffect] 🔄 Executing handleRefresh now');
-        handleRefresh(true); // Silent refresh
-      }, 300);
-
-      return () => {
-        console.log('[AutoRefreshEffect] Cleanup: clearing timer');
-        clearTimeout(timer);
-      };
-    } else {
-      console.log('[AutoRefreshEffect] No refresh needed, totalEquity looks valid:', totalEquity);
-    }
-  }, [portfolio, portfolioId, isGuest, portfolioLoading]); // Run when portfolio data changes
+  // Removed auto-refresh logic - the real issue was showing $0 instead of loading state
+  // The fix is to properly check loading states before rendering numeric values
 
   // Auto-refresh every 5 minutes (silent mode to avoid notification spam)
   useEffect(() => {
@@ -581,44 +512,56 @@ export default function Dashboard() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Risk Gauge */}
             <div className="lg:col-span-1">
-              <RiskGauge 
-                leverageRatio={parseFloat(actualRiskMetrics?.leverageRatio || "0")} 
-                riskLevel={actualRiskMetrics?.riskLevel || "GREEN"}
-              />
+              {riskLoading || !actualRiskMetrics ? (
+                <div className="bg-slate-800 rounded-xl p-6 border border-gray-700 flex items-center justify-center h-full">
+                  <span className="text-gray-500">加载风险数据中...</span>
+                </div>
+              ) : (
+                <RiskGauge
+                  leverageRatio={parseFloat(actualRiskMetrics.leverageRatio || "0")}
+                  riskLevel={actualRiskMetrics.riskLevel || "GREEN"}
+                />
+              )}
             </div>
-            
+
             {/* Key Metrics */}
             <div className="lg:col-span-2">
-              <div className="grid grid-cols-2 gap-4 h-full">
-                <MetricsCard
-                  title="投资组合Beta值"
-                  value={actualRiskMetrics?.portfolioBeta || "0.00"}
-                  description={parseFloat(actualRiskMetrics?.portfolioBeta || "0") > 1.2 ? "高于市场波动" : "波动适中"}
-                  type={parseFloat(actualRiskMetrics?.portfolioBeta || "0") > 1.2 ? "warning" : "success"}
-                  tooltip="衡量相对市场的波动性"
-                />
-                <MetricsCard
-                  title="最大持仓集中度"
-                  value={`${actualRiskMetrics?.maxConcentration || "0"}%`}
-                  description={parseFloat(actualRiskMetrics?.maxConcentration || "0") > 20 ? "超过建议上限" : "集中度适中"}
-                  type={parseFloat(actualRiskMetrics?.maxConcentration || "0") > 20 ? "danger" : "success"}
-                  tooltip="单个标的占总投资组合比例"
-                />
-                <MetricsCard
-                  title="保证金使用率"
-                  value={`${actualRiskMetrics?.marginUsageRatio || "0"}%`}
-                  description={parseFloat(actualRiskMetrics?.marginUsageRatio || "0") > 80 ? "接近保证金上限" : "使用率适中"}
-                  type={parseFloat(actualRiskMetrics?.marginUsageRatio || "0") > 80 ? "warning" : "success"}
-                  tooltip="已用保证金占总保证金比例"
-                />
-                <MetricsCard
-                  title="剩余流动性"
-                  value={`${actualRiskMetrics?.remainingLiquidity || "0"}%`}
-                  description={parseFloat(actualRiskMetrics?.remainingLiquidity || "0") < 30 ? "低于建议30%" : "流动性充足"}
-                  type={parseFloat(actualRiskMetrics?.remainingLiquidity || "0") < 30 ? "danger" : "success"}
-                  tooltip="剩余流动性占净清算价值比例"
-                />
-              </div>
+              {riskLoading || !actualRiskMetrics ? (
+                <div className="bg-slate-800 rounded-xl p-6 border border-gray-700 flex items-center justify-center h-full">
+                  <span className="text-gray-500">加载指标中...</span>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-4 h-full">
+                  <MetricsCard
+                    title="投资组合Beta值"
+                    value={actualRiskMetrics.portfolioBeta || "0.00"}
+                    description={parseFloat(actualRiskMetrics.portfolioBeta || "0") > 1.2 ? "高于市场波动" : "波动适中"}
+                    type={parseFloat(actualRiskMetrics.portfolioBeta || "0") > 1.2 ? "warning" : "success"}
+                    tooltip="衡量相对市场的波动性"
+                  />
+                  <MetricsCard
+                    title="最大持仓集中度"
+                    value={`${actualRiskMetrics.maxConcentration || "0"}%`}
+                    description={parseFloat(actualRiskMetrics.maxConcentration || "0") > 20 ? "超过建议上限" : "集中度适中"}
+                    type={parseFloat(actualRiskMetrics.maxConcentration || "0") > 20 ? "danger" : "success"}
+                    tooltip="单个标的占总投资组合比例"
+                  />
+                  <MetricsCard
+                    title="保证金使用率"
+                    value={`${actualRiskMetrics.marginUsageRatio || "0"}%`}
+                    description={parseFloat(actualRiskMetrics.marginUsageRatio || "0") > 80 ? "接近保证金上限" : "使用率适中"}
+                    type={parseFloat(actualRiskMetrics.marginUsageRatio || "0") > 80 ? "warning" : "success"}
+                    tooltip="已用保证金占总保证金比例"
+                  />
+                  <MetricsCard
+                    title="剩余流动性"
+                    value={`${actualRiskMetrics.remainingLiquidity || "0"}%`}
+                    description={parseFloat(actualRiskMetrics.remainingLiquidity || "0") < 30 ? "低于建议30%" : "流动性充足"}
+                    type={parseFloat(actualRiskMetrics.remainingLiquidity || "0") < 30 ? "danger" : "success"}
+                    tooltip="剩余流动性占净清算价值比例"
+                  />
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -659,19 +602,31 @@ export default function Dashboard() {
               <div className="bg-slate-800 rounded-xl p-4 border border-gray-700">
                 <div className="text-sm text-gray-400">净清算价值</div>
                 <div className="text-2xl font-bold text-white">
-                  ${parseFloat(actualPortfolio?.totalEquity || "0").toLocaleString()}
+                  {portfolioLoading || !actualPortfolio ? (
+                    <span className="text-gray-500">加载中...</span>
+                  ) : (
+                    `$${parseFloat(actualPortfolio.totalEquity || "0").toLocaleString()}`
+                  )}
                 </div>
               </div>
               <div className="bg-slate-800 rounded-xl p-4 border border-gray-700">
                 <div className="text-sm text-gray-400">市场价值</div>
                 <div className="text-2xl font-bold text-white">
-                  ${parseFloat(actualRiskMetrics?.stockValue || "0").toLocaleString()}
+                  {riskLoading || !actualRiskMetrics ? (
+                    <span className="text-gray-500">加载中...</span>
+                  ) : (
+                    `$${parseFloat(actualRiskMetrics.stockValue || "0").toLocaleString()}`
+                  )}
                 </div>
               </div>
               <div className="bg-slate-800 rounded-xl p-4 border border-gray-700">
                 <div className="text-sm text-gray-400">维持保证金</div>
                 <div className="text-2xl font-bold text-yellow-500">
-                  ${parseFloat(actualPortfolio?.marginUsed || "0").toLocaleString()}
+                  {portfolioLoading || !actualPortfolio ? (
+                    <span className="text-gray-500">加载中...</span>
+                  ) : (
+                    `$${parseFloat(actualPortfolio.marginUsed || "0").toLocaleString()}`
+                  )}
                 </div>
               </div>
               <div className="bg-slate-800 rounded-xl p-4 border border-gray-700">
