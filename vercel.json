@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "installCommand": "cd calmlyinvest && npm install",
+  "installCommand": "npm install && cd calmlyinvest && npm install",
   "buildCommand": "cd calmlyinvest && npm run build",
   "devCommand": "cd calmlyinvest && npm run dev",
   "outputDirectory": "calmlyinvest/dist/public",
