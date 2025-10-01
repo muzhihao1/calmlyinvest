@@ -1,0 +1,13 @@
+{
+  "name": "calmlyinvest-api",
+  "version": "1.0.0",
+  "description": "Serverless API functions for CalmlyInvest",
+  "private": true,
+  "dependencies": {
+    "@vercel/node": "^3.0.0",
+    "yahoo-finance2": "^2.13.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

@@ -219,20 +219,39 @@ export function AddHoldingDialog({ open, onOpenChange, type, portfolioId }: AddH
     mutationFn: async (data: z.infer<typeof stockFormSchema>) => {
       // 获取股票信息
       let finalData = { ...data };
-      
+
       try {
+        console.log(`Fetching quote for ${data.symbol}...`);
         const quoteResponse = await fetch(`/api/stock-quote-simple?symbol=${data.symbol}`);
+
+        // Check response status
+        if (!quoteResponse.ok) {
+          console.error(`API returned status ${quoteResponse.status}`);
+          throw new Error(`API returned status ${quoteResponse.status}`);
+        }
+
         const quote = await quoteResponse.json();
-        
+        console.log(`Quote received for ${data.symbol}:`, quote);
+
+        // Validate that we got real data (not mock data with default values)
+        if (!quote.price || quote.price === 0) {
+          console.warn('Received invalid price from API, using fallback');
+          throw new Error('Invalid price from API');
+        }
+
         // 自动填充数据
         finalData.currentPrice = quote.price.toFixed(2);
         finalData.beta = (quote.beta || 1.0).toFixed(2);
         finalData.name = quote.name || data.symbol;
+
+        console.log('Final data with API quote:', finalData);
       } catch (error) {
+        console.error('Failed to fetch stock quote, using fallback values:', error);
         // 如果获取失败，使用默认值
         finalData.currentPrice = data.costPrice;
         finalData.beta = "1.0";
         finalData.name = data.symbol;
+        console.log('Final data with fallback:', finalData);
       }
       
       if (isGuest) {
