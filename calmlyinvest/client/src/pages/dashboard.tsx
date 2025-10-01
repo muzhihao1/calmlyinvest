@@ -1,5 +1,4 @@
-// Cache-bust: 2025-10-01-v2
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -23,6 +22,10 @@ import type { Portfolio, StockHolding, OptionHolding, RiskSettings } from "@shar
 import type { Suggestion } from "@/components/smart-suggestions";
 
 export default function Dashboard() {
+  // Diagnostic: Track render count
+  const renderCount = useRef(0);
+  renderCount.current += 1;
+
   const [lastUpdate, setLastUpdate] = useState(new Date());
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [addDialogType, setAddDialogType] = useState<"stock" | "option">("stock");
@@ -349,20 +352,69 @@ export default function Dashboard() {
 
   // Initial refresh when portfolio loads (to calculate total_equity)
   useEffect(() => {
-    if (!portfolioId || isGuest || portfolioLoading || !portfolio) return;
+    console.log('[AutoRefreshEffect] Effect running', {
+      renderCount: renderCount.current,
+      portfolioId,
+      isGuest,
+      portfolioLoading,
+      hasPortfolio: !!portfolio,
+      timestamp: performance.now()
+    });
 
-    // Check if total_equity is 0 or very small (indicates prices not yet loaded)
-    const totalEquity = parseFloat(portfolio.totalEquity || '0');
+    if (!portfolioId) {
+      console.log('[AutoRefreshEffect] Early return: no portfolioId');
+      return;
+    }
+    if (isGuest) {
+      console.log('[AutoRefreshEffect] Early return: isGuest mode');
+      return;
+    }
+    if (portfolioLoading) {
+      console.log('[AutoRefreshEffect] Early return: portfolioLoading=true');
+      return;
+    }
+    if (!portfolio) {
+      console.log('[AutoRefreshEffect] Early return: portfolio is null/undefined');
+      return;
+    }
 
-    // If portfolio value is 0 but user has holdings, trigger immediate refresh
-    if (totalEquity === 0 || totalEquity < 0.01) {
-      // Small delay to avoid race condition with holdings queries
+    // Log raw portfolio data
+    console.log('[AutoRefreshEffect] Portfolio data:', {
+      totalEquity_raw: portfolio.totalEquity,
+      totalEquity_type: typeof portfolio.totalEquity,
+      marketValue: portfolio.marketValue,
+      netLiquidation: portfolio.netLiquidation
+    });
+
+    // Normalize totalEquity to number
+    const totalEquityRaw = portfolio.totalEquity;
+    const totalEquity = typeof totalEquityRaw === 'number'
+      ? totalEquityRaw
+      : parseFloat(String(totalEquityRaw || '0'));
+
+    console.log('[AutoRefreshEffect] Normalized totalEquity:', {
+      raw: totalEquityRaw,
+      normalized: totalEquity,
+      isFinite: Number.isFinite(totalEquity),
+      isZero: totalEquity === 0,
+      isSmall: totalEquity < 0.01
+    });
+
+    // If portfolio value is 0 or very small, trigger immediate refresh
+    if (Number.isFinite(totalEquity) && (totalEquity === 0 || totalEquity < 0.01)) {
+      console.log('[AutoRefreshEffect] ✅ Triggering auto-refresh (totalEquity is 0 or < 0.01)');
+
       const timer = setTimeout(() => {
-        console.log('Auto-refreshing prices for initial load (totalEquity is 0)');
+        console.log('[AutoRefreshEffect] 🔄 Executing handleRefresh now');
         handleRefresh(true); // Silent refresh
-      }, 300); // Reduced from 1000ms to 300ms
+      }, 300);
 
-      return () => clearTimeout(timer);
+      return () => {
+        console.log('[AutoRefreshEffect] Cleanup: clearing timer');
+        clearTimeout(timer);
+      };
+    } else {
+      console.log('[AutoRefreshEffect] No refresh needed, totalEquity looks valid:', totalEquity);
     }
   }, [portfolio, portfolioId, isGuest, portfolioLoading]); // Run when portfolio data changes
 
