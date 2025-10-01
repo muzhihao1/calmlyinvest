@@ -1,4 +1,4 @@
-import { VercelRequest, VercelResponse } from '@vercel/node';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 /**
  * Lazy load yahoo-finance2 to avoid initialization issues
@@ -49,44 +49,45 @@ async function fetchStockData(symbol: string): Promise<{ price: number; beta: nu
   }
 }
 
-// Enable CORS
-const allowCors = (handler: (req: VercelRequest, res: VercelResponse) => Promise<void>) => {
-  return async (req: VercelRequest, res: VercelResponse) => {
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
-    res.setHeader(
-      'Access-Control-Allow-Headers',
-      'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization'
-    );
+/**
+ * API handler for stock quote simple endpoint
+ * GET /api/stock-quote-simple?symbol=TSLA
+ */
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // Set CORS headers
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
+  res.setHeader(
+    'Access-Control-Allow-Headers',
+    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization'
+  );
 
-    if (req.method === 'OPTIONS') {
-      res.status(200).end();
-      return;
-    }
-
-    return await handler(req, res);
-  };
-};
-
-async function handler(req: VercelRequest, res: VercelResponse) {
-  const { method, query } = req;
-  const { symbol } = query;
-
-  if (method !== 'GET') {
-    res.setHeader('Allow', ['GET']);
-    return res.status(405).end(`Method ${method} Not Allowed`);
+  // Handle preflight
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
   }
+
+  // Only allow GET
+  if (req.method !== 'GET') {
+    res.setHeader('Allow', ['GET']);
+    return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
+  }
+
+  const { symbol } = req.query;
 
   if (!symbol || typeof symbol !== 'string') {
     return res.status(400).json({ error: 'Symbol is required' });
   }
 
   try {
+    console.log(`[stock-quote-simple] Fetching quote for ${symbol}...`);
+
     // Fetch real stock data from Yahoo Finance
     const stockData = await fetchStockData(symbol.toUpperCase());
 
     if (!stockData) {
+      console.error(`[stock-quote-simple] No data found for ${symbol}`);
       return res.status(404).json({
         error: 'Stock data not found',
         message: `Could not fetch data for symbol ${symbol.toUpperCase()}`
@@ -104,15 +105,13 @@ async function handler(req: VercelRequest, res: VercelResponse) {
       changePercent: 1.0,
     };
 
-    console.log(`Returning quote for ${symbol}:`, quote);
-    res.status(200).json(quote);
+    console.log(`[stock-quote-simple] Returning quote for ${symbol}:`, quote);
+    return res.status(200).json(quote);
   } catch (error) {
-    console.error(`Error fetching stock quote for ${symbol}:`, error);
-    res.status(500).json({
+    console.error(`[stock-quote-simple] Error fetching stock quote for ${symbol}:`, error);
+    return res.status(500).json({
       error: 'Failed to fetch stock data',
       message: error instanceof Error ? error.message : 'Unknown error occurred'
     });
   }
 }
-
-export default allowCors(handler);
