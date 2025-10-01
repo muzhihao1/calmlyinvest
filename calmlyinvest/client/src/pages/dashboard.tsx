@@ -305,47 +305,57 @@ export default function Dashboard() {
     queryKey: [`/api/user-risk-settings-simple?userId=${userId}`],
   });
 
-  const handleRefresh = async () => {
+  const handleRefresh = async (silent: boolean = false) => {
     if (!portfolioId) {
-      toast({
-        title: "无投资组合",
-        description: "请先创建投资组合",
-        variant: "destructive",
-      });
+      if (!silent) {
+        toast({
+          title: "无投资组合",
+          description: "请先创建投资组合",
+          variant: "destructive",
+        });
+      }
       return;
     }
-    
+
     try {
       // Refresh market prices first
       const response = await apiRequest("POST", `/api/portfolio/${portfolioId}/refresh-prices`);
       const result = await response.json();
-      
+
       // Then refresh all data
       await refetchRisk();
       queryClient.invalidateQueries();
       setLastUpdate(new Date());
-      
-      toast({
-        title: "数据已更新",
-        description: `${result.message || "风险指标已重新计算"}`,
-      });
+
+      // Only show toast if not silent (manual refresh)
+      if (!silent) {
+        toast({
+          title: "数据已更新",
+          description: `${result.message || "风险指标已重新计算"}`,
+        });
+      }
     } catch (error) {
-      toast({
-        title: "更新失败",
-        description: "无法刷新数据，请稍后重试",
-        variant: "destructive",
-      });
+      // Always show error toast
+      if (!silent) {
+        toast({
+          title: "更新失败",
+          description: "无法刷新数据，请稍后重试",
+          variant: "destructive",
+        });
+      }
     }
   };
 
-  // Auto-refresh every 5 minutes
+  // Auto-refresh every 5 minutes (silent mode to avoid notification spam)
   useEffect(() => {
+    if (!portfolioId || !refetchRisk) return;
+
     const interval = setInterval(() => {
-      handleRefresh();
+      handleRefresh(true); // Silent refresh
     }, 5 * 60 * 1000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [portfolioId, refetchRisk]);
 
   const formatLastUpdate = (date: Date) => {
     return date.toLocaleString('zh-CN', {
