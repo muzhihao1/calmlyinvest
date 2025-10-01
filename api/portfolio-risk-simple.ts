@@ -113,7 +113,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(500).json({ error: 'Failed to fetch options' });
     }
 
-    // Calculate risk metrics
+    // Calculate risk metrics based on professional risk management principles
     const totalEquity = parseFloat(portfolio.total_equity || '0');
     const cashBalance = parseFloat(portfolio.cash_balance || '0');
     const marginUsed = parseFloat(portfolio.margin_used || '0');
@@ -122,6 +122,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     let totalStockValue = 0;
     let weightedBeta = 0;
     let maxStockValue = 0;
+    let maxStockSymbol = '';
 
     (stocks || []).forEach((stock: any) => {
       const quantity = parseFloat(stock.quantity || '0');
@@ -134,54 +135,149 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       if (stockValue > maxStockValue) {
         maxStockValue = stockValue;
+        maxStockSymbol = stock.symbol;
       }
     });
 
-    // Calculate option metrics (simplified - options reduce buying power)
+    // Calculate option potential max loss (期权潜在最大亏损)
+    let optionMaxLoss = 0;
     let totalOptionValue = 0;
+    let hasHighRiskOptions = false;
+    const highRiskStrategies: string[] = [];
+
     (options || []).forEach((option: any) => {
       const contracts = parseFloat(option.contracts || '0');
+      const strikePrice = parseFloat(option.strike_price || '0');
       const currentPrice = parseFloat(option.current_price || '0');
-      // Each contract = 100 shares
-      totalOptionValue += contracts * currentPrice * 100;
+      const costPrice = parseFloat(option.cost_price || '0');
+      const optionType = option.option_type; // 'PUT' or 'CALL'
+      const direction = option.direction; // 'BUY' or 'SELL'
+
+      // Current market value
+      totalOptionValue += currentPrice * contracts * 100;
+
+      // Calculate potential max loss based on strategy
+      if (direction === 'SELL') {
+        // 单腿卖期权 - 高风险策略
+        hasHighRiskOptions = true;
+
+        if (optionType === 'PUT') {
+          // Sell Put: 最大亏损 = 行权价 * 合约数 * 100
+          const maxLoss = strikePrice * contracts * 100;
+          optionMaxLoss += maxLoss;
+          highRiskStrategies.push(`Sell ${option.underlying_symbol} Put`);
+        } else if (optionType === 'CALL') {
+          // Sell Naked Call: 理论无限亏损，用2倍行权价估算
+          const maxLoss = strikePrice * contracts * 100 * 2;
+          optionMaxLoss += maxLoss;
+          highRiskStrategies.push(`Sell ${option.underlying_symbol} Naked Call`);
+        }
+      } else if (direction === 'BUY') {
+        // Buy Put/Call: 最大亏损 = 已付权利金
+        const maxLoss = costPrice * contracts * 100;
+        optionMaxLoss += maxLoss;
+      }
     });
 
-    const totalMarketValue = totalStockValue + totalOptionValue;
+    // 杠杆率 = (正股价值 + 期权潜在最大亏损) / 总股本
+    const totalRisk = totalStockValue + optionMaxLoss;
+    const leverageRatio = totalEquity > 0 ? totalRisk / totalEquity : 0;
 
-    // Calculate risk indicators
-    const leverageRatio = totalEquity > 0 ? totalMarketValue / totalEquity : 0;
     const portfolioBeta = totalStockValue > 0 ? weightedBeta / totalStockValue : 0;
-    const maxConcentration = totalMarketValue > 0 ? (maxStockValue / totalMarketValue) * 100 : 0;
+
+    // 最大单一持仓集中度
+    const maxConcentration = totalStockValue > 0 ? (maxStockValue / totalStockValue) * 100 : 0;
+
+    // 保证金使用率
     const marginUsageRatio = totalEquity > 0 ? (marginUsed / totalEquity) * 100 : 0;
+
+    // 剩余保证金（Excess Liquidity）
+    const excessLiquidity = totalEquity - marginUsed;
+    const excessLiquidityRatio = totalEquity > 0 ? (excessLiquidity / totalEquity) * 100 : 0;
+
+    // 现金比率
     const cashRatio = totalEquity > 0 ? (cashBalance / totalEquity) * 100 : 0;
 
-    // Determine risk level
+    // Determine risk level based on professional principles
     let riskLevel = 'low';
-    if (leverageRatio >= 1.5 || maxConcentration >= 30 || marginUsageRatio >= 70) {
+    const riskFactors: string[] = [];
+
+    // 高风险条件
+    if (leverageRatio >= 1.5) {
       riskLevel = 'high';
-    } else if (leverageRatio >= 1.0 || maxConcentration >= 20 || marginUsageRatio >= 50) {
-      riskLevel = 'medium';
+      riskFactors.push('杠杆率≥1.5倍');
+    }
+    if (maxConcentration > 20) {
+      riskLevel = 'high';
+      riskFactors.push(`单一持仓(${maxStockSymbol})超过20%`);
+    }
+    if (excessLiquidityRatio < 30) {
+      riskLevel = 'high';
+      riskFactors.push('剩余保证金低于30%');
+    }
+    if (hasHighRiskOptions) {
+      riskLevel = 'high';
+      riskFactors.push('使用高风险期权策略');
+    }
+
+    // 中风险条件（如果不是高风险）
+    if (riskLevel !== 'high') {
+      if (leverageRatio >= 1.0) {
+        riskLevel = 'medium';
+        riskFactors.push('杠杆率≥1.0倍');
+      }
+      if (maxConcentration > 10) {
+        if (riskLevel !== 'medium') riskLevel = 'medium';
+        riskFactors.push(`单一持仓(${maxStockSymbol})超过10%`);
+      }
     }
 
     const riskMetrics = {
       portfolioId: portfolioId,
-      leverageRatio: leverageRatio.toFixed(2),
+
+      // Core risk metrics based on professional principles
+      leverageRatio: leverageRatio.toFixed(2), // (股票价值 + 期权潜在最大亏损) / 总股本
       portfolioBeta: portfolioBeta.toFixed(2),
       maxConcentration: maxConcentration.toFixed(2),
-      // Support both field naming conventions for compatibility
+      maxConcentrationSymbol: maxStockSymbol,
+
+      // Margin metrics
       marginUsage: marginUsageRatio.toFixed(2),
-      marginUsageRatio: marginUsageRatio.toFixed(2),
+      marginUsageRatio: marginUsageRatio.toFixed(2), // Alias
+      excessLiquidity: excessLiquidity.toFixed(2),
+      excessLiquidityRatio: excessLiquidityRatio.toFixed(2),
+
+      // Cash metrics
       cashRatio: cashRatio.toFixed(2),
-      remainingLiquidity: cashRatio.toFixed(2),
-      totalMarketValue: totalMarketValue.toFixed(2),
+      remainingLiquidity: excessLiquidityRatio.toFixed(2), // 剩余保证金比率 (更准确)
+
+      // Market values
+      totalMarketValue: (totalStockValue + totalOptionValue).toFixed(2),
       totalStockValue: totalStockValue.toFixed(2),
-      stockValue: totalStockValue.toFixed(2), // Alias for frontend compatibility
+      stockValue: totalStockValue.toFixed(2), // Alias
       totalOptionValue: totalOptionValue.toFixed(2),
-      optionMaxLoss: totalOptionValue.toFixed(2), // Alias for frontend compatibility
+      optionMaxLoss: optionMaxLoss.toFixed(2), // 期权潜在最大亏损
+      totalRisk: totalRisk.toFixed(2), // 总风险敞口
+
+      // Portfolio details
       totalEquity: totalEquity.toFixed(2),
       cashBalance: cashBalance.toFixed(2),
       marginUsed: marginUsed.toFixed(2),
+
+      // Risk assessment
       riskLevel: riskLevel,
+      riskFactors: riskFactors,
+      hasHighRiskOptions: hasHighRiskOptions,
+      highRiskStrategies: highRiskStrategies,
+
+      // Recommendations
+      recommendations: {
+        leverageOk: leverageRatio < 1.0,
+        concentrationOk: maxConcentration <= 10,
+        liquidityOk: excessLiquidityRatio >= 30,
+        optionsOk: !hasHighRiskOptions
+      },
+
       lastCalculated: new Date().toISOString()
     };
 
