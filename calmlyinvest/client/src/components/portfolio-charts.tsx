@@ -68,26 +68,31 @@ export function PortfolioCharts({ stockHoldings, optionHoldings, riskMetrics, po
     {
       metric: "杠杆率",
       value: Math.min((parseFloat(riskMetrics?.leverageRatio || "0") / 2) * 100, 100),
+      actualValue: parseFloat(riskMetrics?.leverageRatio || "0").toFixed(2),
       fullMark: 100,
     },
     {
       metric: "集中度",
-      value: Math.min((parseFloat(riskMetrics?.maxConcentration || "0") / 0.5) * 100, 100),
+      value: Math.min(parseFloat(riskMetrics?.maxConcentration || "0"), 100),
+      actualValue: `${parseFloat(riskMetrics?.maxConcentration || "0").toFixed(1)}%`,
       fullMark: 100,
     },
     {
       metric: "保证金使用",
-      value: (parseFloat(riskMetrics?.marginUsageRatio || "0") * 100),
+      value: Math.min(parseFloat(riskMetrics?.marginUsageRatio || "0"), 100),
+      actualValue: `${parseFloat(riskMetrics?.marginUsageRatio || "0").toFixed(1)}%`,
       fullMark: 100,
     },
     {
       metric: "流动性",
-      value: Math.max(100 - (parseFloat(riskMetrics?.remainingLiquidity || "0") / parseFloat(portfolio?.totalEquity || "1") * 100), 0),
+      value: Math.max(100 - parseFloat(riskMetrics?.excessLiquidityRatio || "100"), 0),
+      actualValue: `${parseFloat(riskMetrics?.excessLiquidityRatio || "0").toFixed(1)}%`,
       fullMark: 100,
     },
     {
       metric: "Beta系数",
       value: Math.min((parseFloat(riskMetrics?.portfolioBeta || "0") / 2) * 100, 100),
+      actualValue: parseFloat(riskMetrics?.portfolioBeta || "0").toFixed(2),
       fullMark: 100,
     },
   ];
@@ -153,7 +158,7 @@ export function PortfolioCharts({ stockHoldings, optionHoldings, riskMetrics, po
                   <ResponsiveContainer width="100%" height={300}>
                     <PieChart>
                       <Pie
-                        data={assetDistribution}
+                        data={assetDistribution.filter(item => item.value > 0)}
                         cx="50%"
                         cy="50%"
                         labelLine={false}
@@ -162,13 +167,27 @@ export function PortfolioCharts({ stockHoldings, optionHoldings, riskMetrics, po
                         fill="#8884d8"
                         dataKey="value"
                       >
-                        {assetDistribution.map((entry, index) => (
+                        {assetDistribution.filter(item => item.value > 0).map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                         ))}
                       </Pie>
-                      <Tooltip formatter={(value: number) => `$${value.toLocaleString()}`} />
+                      <Tooltip
+                        formatter={(value: number) => `$${value.toLocaleString()}`}
+                        contentStyle={{ backgroundColor: 'rgba(0, 0, 0, 0.8)', border: 'none', borderRadius: '8px' }}
+                      />
                     </PieChart>
                   </ResponsiveContainer>
+                  <div className="mt-4 space-y-2">
+                    {assetDistribution.filter(item => item.value > 0).map((item, index) => (
+                      <div key={index} className="flex justify-between items-center text-sm">
+                        <span className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
+                          {item.name}
+                        </span>
+                        <span className="font-medium">${parseFloat(String(item.value)).toLocaleString()}</span>
+                      </div>
+                    ))}
+                  </div>
                 </CardContent>
               </Card>
 
@@ -177,25 +196,47 @@ export function PortfolioCharts({ stockHoldings, optionHoldings, riskMetrics, po
                   <CardTitle className="text-base">持仓分布</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <PieChart>
-                      <Pie
-                        data={compositionData}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        label={({ name }) => name}
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="value"
-                      >
-                        {compositionData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  {compositionData.length > 0 ? (
+                    <>
+                      <ResponsiveContainer width="100%" height={300}>
+                        <PieChart>
+                          <Pie
+                            data={compositionData}
+                            cx="50%"
+                            cy="50%"
+                            labelLine={false}
+                            label={({ name }) => name}
+                            outerRadius={80}
+                            fill="#8884d8"
+                            dataKey="value"
+                          >
+                            {compositionData.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                            ))}
+                          </Pie>
+                          <Tooltip
+                            formatter={(value: number) => `$${value.toLocaleString()}`}
+                            contentStyle={{ backgroundColor: 'rgba(0, 0, 0, 0.8)', border: 'none', borderRadius: '8px' }}
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
+                      <div className="mt-4 max-h-32 overflow-y-auto space-y-1">
+                        {compositionData.map((item, index) => (
+                          <div key={index} className="flex justify-between items-center text-xs">
+                            <span className="flex items-center gap-2">
+                              <div className="w-2 h-2 rounded" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
+                              {item.name}
+                            </span>
+                            <span className="text-muted-foreground">${parseFloat(String(item.value)).toLocaleString()}</span>
+                          </div>
                         ))}
-                      </Pie>
-                      <Tooltip formatter={(value: number) => `$${value.toLocaleString()}`} />
-                    </PieChart>
-                  </ResponsiveContainer>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-center text-muted-foreground py-8">
+                      暂无持仓数据
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -256,6 +297,25 @@ export function PortfolioCharts({ stockHoldings, optionHoldings, riskMetrics, po
                       fill="#ef4444"
                       fillOpacity={0.6}
                     />
+                    <Tooltip
+                      content={({ active, payload }) => {
+                        if (active && payload && payload.length) {
+                          const data = payload[0].payload;
+                          return (
+                            <div className="bg-background border rounded-lg shadow-lg p-3">
+                              <p className="font-medium">{data.metric}</p>
+                              <p className="text-sm text-muted-foreground">
+                                实际值: {data.actualValue}
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                风险评分: {data.value.toFixed(0)}/100
+                              </p>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
                     <Legend />
                   </RadarChart>
                 </ResponsiveContainer>
@@ -269,30 +329,45 @@ export function PortfolioCharts({ stockHoldings, optionHoldings, riskMetrics, po
                 <CardTitle className="text-base">前5大持仓</CardTitle>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={topHoldings} layout="horizontal">
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis type="number" />
-                    <YAxis dataKey="name" type="category" />
-                    <Tooltip formatter={(value: number) => `$${value.toLocaleString()}`} />
-                    <Bar dataKey="value" fill="#3b82f6">
-                      {topHoldings.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                {topHoldings.length > 0 ? (
+                  <>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <BarChart
+                        data={topHoldings}
+                        layout="vertical"
+                        margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis type="number" tickFormatter={(value) => `$${value.toLocaleString()}`} />
+                        <YAxis dataKey="name" type="category" width={80} />
+                        <Tooltip
+                          formatter={(value: number) => [`$${value.toLocaleString()}`, '市值']}
+                          labelFormatter={(label) => `${label}`}
+                        />
+                        <Bar dataKey="value" radius={[0, 8, 8, 0]}>
+                          {topHoldings.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                    <div className="mt-4 space-y-2">
+                      {topHoldings.map((holding, index) => (
+                        <div key={index} className="flex justify-between items-center text-sm">
+                          <span className="flex items-center gap-2">
+                            <div className="w-3 h-3 rounded" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
+                            {holding.name} ({holding.type})
+                          </span>
+                          <span className="font-medium">{holding.percentage}%</span>
+                        </div>
                       ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-                <div className="mt-4 space-y-2">
-                  {topHoldings.map((holding, index) => (
-                    <div key={index} className="flex justify-between items-center text-sm">
-                      <span className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
-                        {holding.name} ({holding.type})
-                      </span>
-                      <span className="font-medium">{holding.percentage}%</span>
                     </div>
-                  ))}
-                </div>
+                  </>
+                ) : (
+                  <div className="text-center text-muted-foreground py-8">
+                    暂无持仓数据
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

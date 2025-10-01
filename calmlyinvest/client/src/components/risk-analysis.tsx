@@ -28,23 +28,44 @@ export function RiskAnalysis({ stockHoldings, optionHoldings, riskMetrics }: Ris
   const calculateStressTest = () => {
     const totalEquity = parseFloat(riskMetrics?.totalEquity || "0");
     const stockValue = parseFloat(riskMetrics?.stockValue || "0");
-    
-    // Simulate market drops
+    const portfolioBeta = parseFloat(riskMetrics?.portfolioBeta || "1.0");
+    const optionMaxLoss = parseFloat(riskMetrics?.optionMaxLoss || "0");
+    const leverageRatio = parseFloat(riskMetrics?.leverageRatio || "0");
+
+    // Simulate market drops with proper leverage effect
     const scenarios = [
-      { name: "市场下跌10%", drop: 0.1 },
-      { name: "市场下跌20%", drop: 0.2 },
-      { name: "市场下跌30%", drop: 0.3 }
+      { name: "市场下跌10%", marketDrop: 0.1 },
+      { name: "市场下跌20%", marketDrop: 0.2 },
+      { name: "市场下跌30%", marketDrop: 0.3 }
     ];
 
     return scenarios.map(scenario => {
-      const loss = stockValue * scenario.drop;
-      const newLeverageRatio = totalEquity > 0 ? 
-        ((stockValue - loss) + parseFloat(riskMetrics?.optionMaxLoss || "0")) / totalEquity : 0;
-      
+      // Calculate stock value drop considering beta
+      const stockValueDrop = stockValue * scenario.marketDrop * portfolioBeta;
+
+      // Portfolio loss = stock value drop (this comes directly from total equity)
+      const portfolioLoss = stockValueDrop;
+
+      // New total equity after loss
+      const newTotalEquity = Math.max(totalEquity - portfolioLoss, 0);
+
+      // New stock value after drop
+      const newStockValue = stockValue - stockValueDrop;
+
+      // New leverage ratio (if equity becomes 0, leverage is infinite)
+      const newLeverageRatio = newTotalEquity > 0 ?
+        (newStockValue + optionMaxLoss) / newTotalEquity : 999;
+
+      // Drawdown percentage relative to total equity
+      const drawdownPercent = totalEquity > 0 ? (portfolioLoss / totalEquity) * 100 : 0;
+
       return {
-        ...scenario,
-        loss,
-        newLeverageRatio
+        name: scenario.name,
+        marketDrop: scenario.marketDrop,
+        loss: portfolioLoss,
+        drawdownPercent,
+        newLeverageRatio: Math.min(newLeverageRatio, 999), // Cap at 999 for display
+        newTotalEquity
       };
     });
   };
@@ -208,20 +229,82 @@ export function RiskAnalysis({ stockHoldings, optionHoldings, riskMetrics }: Ris
       <Card className="bg-slate-800 border-gray-700 lg:col-span-2">
         <CardHeader>
           <CardTitle className="text-white">压力测试</CardTitle>
+          <div className="text-sm text-gray-400 mt-2">
+            基于当前杠杆率 {riskMetrics?.leverageRatio || "0.00"} 和组合Beta {riskMetrics?.portfolioBeta || "0.00"}
+          </div>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {stressTests.map((test, index) => (
-              <div key={index} className="text-center p-4 rounded-lg bg-slate-700">
-                <div className="text-gray-400 text-sm mb-2">{test.name}</div>
-                <div className="text-2xl font-bold text-red-500 mb-1">
-                  -${test.loss.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+            {stressTests.map((test, index) => {
+              const isHighRisk = test.drawdownPercent > 50;
+              const isMediumRisk = test.drawdownPercent > 30 && test.drawdownPercent <= 50;
+
+              return (
+                <div key={index} className={`p-4 rounded-lg border-2 ${
+                  isHighRisk ? 'bg-red-900/20 border-red-500' :
+                  isMediumRisk ? 'bg-yellow-900/20 border-yellow-500' :
+                  'bg-slate-700 border-slate-600'
+                }`}>
+                  <div className="text-gray-400 text-sm mb-3">{test.name}</div>
+
+                  <div className="space-y-2">
+                    <div>
+                      <div className="text-xs text-gray-400 mb-1">账户回撤</div>
+                      <div className={`text-3xl font-bold ${
+                        isHighRisk ? 'text-red-500' :
+                        isMediumRisk ? 'text-yellow-500' :
+                        'text-orange-500'
+                      }`}>
+                        -{test.drawdownPercent.toFixed(1)}%
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="text-xs text-gray-400 mb-1">预计亏损</div>
+                      <div className="text-lg font-semibold text-red-400">
+                        -${test.loss.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                      </div>
+                    </div>
+
+                    <div className="pt-2 border-t border-gray-600">
+                      <div className="flex justify-between text-xs">
+                        <span className="text-gray-400">新杠杆率</span>
+                        <span className={`font-semibold ${
+                          test.newLeverageRatio >= 3 ? 'text-red-500' :
+                          test.newLeverageRatio >= 2 ? 'text-yellow-500' :
+                          'text-green-500'
+                        }`}>
+                          {test.newLeverageRatio.toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-xs mt-1">
+                        <span className="text-gray-400">剩余权益</span>
+                        <span className="text-white">
+                          ${test.newTotalEquity.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div className="text-sm text-gray-400">
-                  杠杆率: {test.newLeverageRatio.toFixed(2)}
-                </div>
+              );
+            })}
+          </div>
+
+          <div className="mt-4 p-4 rounded-lg bg-slate-700/50 border border-slate-600">
+            <div className="text-xs text-gray-400 space-y-1">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                <span>高风险警告：账户回撤 &gt; 50%，可能面临强制平仓风险</span>
               </div>
-            ))}
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-yellow-500"></div>
+                <span>中风险警告：账户回撤 30-50%，建议减仓或对冲</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-orange-500"></div>
+                <span>低风险：账户回撤 &lt; 30%，处于可承受范围</span>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
