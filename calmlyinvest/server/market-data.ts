@@ -345,25 +345,56 @@ export async function updateStockPrices(holdings: StockHolding[]): Promise<Stock
   }
 }
 
-// Update option holdings with current prices
+// Update option holdings with current prices and Greeks using Tradier API
 export async function updateOptionPrices(holdings: OptionHolding[]): Promise<OptionHolding[]> {
-  const provider = getMarketDataProvider();
-  
+  // Check if Tradier API is configured
+  const tradierApiKey = process.env.TRADIER_API_KEY;
+
+  if (!tradierApiKey) {
+    console.warn('⚠️ Tradier API not configured. Option prices will not be updated.');
+    console.warn('ℹ️ Set TRADIER_API_KEY and TRADIER_SANDBOX in environment variables.');
+    return holdings; // Return unchanged holdings
+  }
+
+  // Use Tradier API for accurate option prices and Greeks
+  const { TradierDataProvider } = await import('./tradier-provider');
+  const tradier = new TradierDataProvider();
+
   const updatedHoldings = await Promise.all(
     holdings.map(async holding => {
       try {
-        const price = await provider.getOptionPrice(holding.optionSymbol);
+        console.log(`📊 Updating option: ${holding.optionSymbol}`);
+
+        // Get both price and Greeks in one API call (more efficient)
+        const quote = await tradier.getOptionQuote(holding.optionSymbol);
+
         return {
           ...holding,
-          currentPrice: price.toFixed(2)
+          currentPrice: quote.price.toFixed(2),
+          deltaValue: quote.delta.toFixed(4) // Update Delta too!
         };
       } catch (error) {
-        console.error(`Failed to update price for ${holding.optionSymbol}:`, error);
-        return holding;
+        console.error(`❌ Failed to update ${holding.optionSymbol}:`, error);
+
+        // If Tradier fails, try fallback to YahooFinance (less accurate)
+        try {
+          console.log(`🔄 Trying fallback provider for ${holding.optionSymbol}...`);
+          const provider = getMarketDataProvider();
+          const price = await provider.getOptionPrice(holding.optionSymbol);
+
+          return {
+            ...holding,
+            currentPrice: price.toFixed(2)
+            // Note: Delta is not updated when using fallback
+          };
+        } catch (fallbackError) {
+          console.error(`❌ Fallback also failed for ${holding.optionSymbol}:`, fallbackError);
+          return holding; // Return unchanged if all methods fail
+        }
       }
     })
   );
-  
+
   return updatedHoldings;
 }
 
