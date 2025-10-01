@@ -153,6 +153,8 @@ export function OptionsTable({ holdings, portfolioId }: OptionsTableProps) {
               <TableHead className="text-gray-400">期权代码</TableHead>
               <TableHead className="text-gray-400">类型</TableHead>
               <TableHead className="text-gray-400">合约数</TableHead>
+              <TableHead className="text-gray-400">成本价</TableHead>
+              <TableHead className="text-gray-400">当前价</TableHead>
               <TableHead className="text-gray-400">执行价</TableHead>
               <TableHead className="text-gray-400">到期日</TableHead>
               <TableHead className="text-gray-400">Delta</TableHead>
@@ -165,6 +167,11 @@ export function OptionsTable({ holdings, portfolioId }: OptionsTableProps) {
               const daysToExpiration = calculateDaysToExpiration(holding.expirationDate.toString());
               const maxRisk = calculateMaxRisk(holding);
               const expirationDate = new Date(holding.expirationDate).toLocaleDateString('zh-CN');
+              const costPrice = parseFloat(holding.costPrice);
+              const currentPrice = parseFloat(holding.currentPrice || holding.costPrice);
+              const priceChange = currentPrice - costPrice;
+              const priceChangePercent = costPrice > 0 ? (priceChange / costPrice) * 100 : 0;
+              const isPriceUp = priceChange > 0;
 
               return (
                 <TableRow key={holding.id} className="border-gray-700 hover:bg-slate-700/50">
@@ -178,6 +185,19 @@ export function OptionsTable({ holdings, portfolioId }: OptionsTableProps) {
                     {getOptionTypeBadge(holding.optionType, holding.direction)}
                   </TableCell>
                   <TableCell className="text-white">{holding.contracts}</TableCell>
+                  <TableCell className="text-gray-400">${costPrice.toFixed(2)}</TableCell>
+                  <TableCell>
+                    <div>
+                      <div className={isPriceUp ? "text-green-500 font-semibold" : priceChange < 0 ? "text-red-500 font-semibold" : "text-white"}>
+                        ${currentPrice.toFixed(2)}
+                      </div>
+                      {priceChange !== 0 && (
+                        <div className={`text-xs ${isPriceUp ? "text-green-500" : "text-red-500"}`}>
+                          {isPriceUp ? "+" : ""}{priceChangePercent.toFixed(2)}%
+                        </div>
+                      )}
+                    </div>
+                  </TableCell>
                   <TableCell className="text-white">${parseFloat(holding.strikePrice).toFixed(2)}</TableCell>
                   <TableCell>
                     <div>
