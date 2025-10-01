@@ -44,7 +44,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         maxConcentration: '0.00',
         marginUsage: '0.00',
         cashRatio: '100.00',
-        riskLevel: 'low',
+        riskLevel: 'GREEN', // Frontend expects GREEN/YELLOW/RED
+        riskLevelText: 'low',
         lastCalculated: new Date().toISOString()
       });
     }
@@ -200,23 +201,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Determine risk level based on professional principles
     let riskLevel = 'low';
+    let riskLevelFrontend = 'GREEN'; // Frontend expects GREEN/YELLOW/RED
     const riskFactors: string[] = [];
 
     // 高风险条件
     if (leverageRatio >= 1.5) {
       riskLevel = 'high';
+      riskLevelFrontend = 'RED';
       riskFactors.push('杠杆率≥1.5倍');
     }
     if (maxConcentration > 20) {
       riskLevel = 'high';
+      riskLevelFrontend = 'RED';
       riskFactors.push(`单一持仓(${maxStockSymbol})超过20%`);
     }
     if (excessLiquidityRatio < 30) {
       riskLevel = 'high';
+      riskLevelFrontend = 'RED';
       riskFactors.push('剩余保证金低于30%');
     }
     if (hasHighRiskOptions) {
       riskLevel = 'high';
+      riskLevelFrontend = 'RED';
       riskFactors.push('使用高风险期权策略');
     }
 
@@ -224,10 +230,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (riskLevel !== 'high') {
       if (leverageRatio >= 1.0) {
         riskLevel = 'medium';
+        riskLevelFrontend = 'YELLOW';
         riskFactors.push('杠杆率≥1.0倍');
       }
       if (maxConcentration > 10) {
-        if (riskLevel !== 'medium') riskLevel = 'medium';
+        if (riskLevel !== 'medium') {
+          riskLevel = 'medium';
+          riskLevelFrontend = 'YELLOW';
+        }
         riskFactors.push(`单一持仓(${maxStockSymbol})超过10%`);
       }
     }
@@ -265,7 +275,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       marginUsed: marginUsed.toFixed(2),
 
       // Risk assessment
-      riskLevel: riskLevel,
+      riskLevel: riskLevelFrontend, // GREEN/YELLOW/RED for frontend
+      riskLevelText: riskLevel, // low/medium/high for backend
       riskFactors: riskFactors,
       hasHighRiskOptions: hasHighRiskOptions,
       highRiskStrategies: highRiskStrategies,
