@@ -1,5 +1,54 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 
+/**
+ * Lazy load yahoo-finance2 to avoid initialization issues
+ */
+let yahooFinanceModule: any = null;
+
+async function getYahooFinance() {
+  if (!yahooFinanceModule) {
+    try {
+      yahooFinanceModule = await import('yahoo-finance2');
+      if (yahooFinanceModule.default) {
+        yahooFinanceModule = yahooFinanceModule.default;
+      }
+    } catch (error) {
+      console.error('Failed to load yahoo-finance2:', error);
+      throw new Error('Yahoo Finance module not available');
+    }
+  }
+  return yahooFinanceModule;
+}
+
+/**
+ * Fetch current stock price and beta from Yahoo Finance
+ */
+async function fetchStockData(symbol: string): Promise<{ price: number; beta: number; name: string } | null> {
+  try {
+    const yahooFinance = await getYahooFinance();
+
+    // Fetch quote for current price
+    const quote = await yahooFinance.quote(symbol);
+    const price = quote.regularMarketPrice || quote.ask || quote.bid || 0;
+    const name = quote.longName || quote.shortName || symbol;
+
+    // Fetch beta from quoteSummary
+    let beta = 1.0;
+    try {
+      const summary = await yahooFinance.quoteSummary(symbol, { modules: ['defaultKeyStatistics'] });
+      beta = summary.defaultKeyStatistics?.beta || 1.0;
+    } catch (betaError) {
+      console.warn(`Failed to fetch beta for ${symbol}, using default 1.0:`, betaError);
+    }
+
+    console.log(`Fetched data for ${symbol}: price=$${price}, beta=${beta}, name=${name}`);
+    return { price, beta, name };
+  } catch (error) {
+    console.error(`Failed to fetch data for ${symbol}:`, error);
+    return null;
+  }
+}
+
 // Enable CORS
 const allowCors = (handler: (req: VercelRequest, res: VercelResponse) => Promise<void>) => {
   return async (req: VercelRequest, res: VercelResponse) => {
@@ -10,12 +59,12 @@ const allowCors = (handler: (req: VercelRequest, res: VercelResponse) => Promise
       'Access-Control-Allow-Headers',
       'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization'
     );
-    
+
     if (req.method === 'OPTIONS') {
       res.status(200).end();
       return;
     }
-    
+
     return await handler(req, res);
   };
 };
@@ -33,57 +82,37 @@ async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ error: 'Symbol is required' });
   }
 
-  // Return mock stock quote data
-  const mockQuotes: Record<string, any> = {
-    'AAPL': {
-      symbol: 'AAPL',
-      name: 'Apple Inc.',
-      price: 195.50,
-      previousClose: 193.20,
-      change: 2.30,
-      changePercent: 1.19,
-      marketCap: 3000000000000,
-      volume: 45000000,
-      beta: 1.25
-    },
-    'GOOGL': {
-      symbol: 'GOOGL',
-      name: 'Alphabet Inc.',
-      price: 150.25,
-      previousClose: 148.50,
-      change: 1.75,
-      changePercent: 1.18,
-      marketCap: 1900000000000,
-      volume: 25000000,
-      beta: 1.08
-    },
-    'MSFT': {
-      symbol: 'MSFT',
-      name: 'Microsoft Corporation',
-      price: 425.00,
-      previousClose: 420.00,
-      change: 5.00,
-      changePercent: 1.19,
-      marketCap: 3100000000000,
-      volume: 22000000,
-      beta: 0.95
+  try {
+    // Fetch real stock data from Yahoo Finance
+    const stockData = await fetchStockData(symbol.toUpperCase());
+
+    if (!stockData) {
+      return res.status(404).json({
+        error: 'Stock data not found',
+        message: `Could not fetch data for symbol ${symbol.toUpperCase()}`
+      });
     }
-  };
 
-  // Return mock data for the requested symbol
-  const quote = mockQuotes[symbol.toUpperCase()] || {
-    symbol: symbol.toUpperCase(),
-    name: symbol.toUpperCase() + ' Corp.',
-    price: 100.00,
-    previousClose: 98.00,
-    change: 2.00,
-    changePercent: 2.04,
-    marketCap: 1000000000,
-    volume: 1000000,
-    beta: 1.00
-  };
+    // Return formatted quote data
+    const quote = {
+      symbol: symbol.toUpperCase(),
+      name: stockData.name,
+      price: stockData.price,
+      beta: stockData.beta,
+      previousClose: stockData.price * 0.99, // Approximate previous close
+      change: stockData.price * 0.01,
+      changePercent: 1.0,
+    };
 
-  res.status(200).json(quote);
+    console.log(`Returning quote for ${symbol}:`, quote);
+    res.status(200).json(quote);
+  } catch (error) {
+    console.error(`Error fetching stock quote for ${symbol}:`, error);
+    res.status(500).json({
+      error: 'Failed to fetch stock data',
+      message: error instanceof Error ? error.message : 'Unknown error occurred'
+    });
+  }
 }
 
 export default allowCors(handler);

@@ -64,10 +64,10 @@ export default function Dashboard() {
   // Custom state for guest mode stock holdings
   const [guestStocks, setGuestStocks] = useState<StockHolding[]>([]);
   const [guestOptions, setGuestOptions] = useState<OptionHolding[]>([]);
-  const [guestCashBalance, setGuestCashBalance] = useState<number>(5000);
+  const [guestCashBalance, setGuestCashBalance] = useState<number>(0);
   const [editingCash, setEditingCash] = useState(false);
   const [tempCashValue, setTempCashValue] = useState<string>("");
-  
+
   // Load guest data from localStorage on mount and when portfolioId changes
   useEffect(() => {
     const loadGuestData = () => {
@@ -82,12 +82,12 @@ export default function Dashboard() {
           // Load portfolio settings (cash balance)
           const settingsStored = localStorage.getItem('guest_portfolio_settings');
           const allSettings = settingsStored ? JSON.parse(settingsStored) : {};
-          const portfolioSettings = allSettings[portfolioId] || { cashBalance: 5000 };
-          setGuestCashBalance(portfolioSettings.cashBalance || 5000);
+          const portfolioSettings = allSettings[portfolioId] || { cashBalance: 0 };
+          setGuestCashBalance(portfolioSettings.cashBalance !== undefined ? portfolioSettings.cashBalance : 0);
         } catch (error) {
           console.error('Error loading guest data from localStorage:', error);
           setGuestStocks([]);
-          setGuestCashBalance(5000);
+          setGuestCashBalance(0);
         }
       }
     };
