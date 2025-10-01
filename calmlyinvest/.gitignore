@@ -10,12 +10,24 @@ build/
 out/
 server/public/
 
-# Environment files
+# Environment files - NEVER COMMIT THESE
 .env
+.env.*
+!.env.example
+!.env.*.example
+
+# Specific environment files
 .env.local
-.env.production.local
-.env.development.local
+.env.production
+.env.production.*
+.env.development
+.env.development.*
 .env.supabase
+.env.supabase.*
+
+# Vercel
+.vercel
+.vercel.json
 
 # IDE
 .vscode/
@@ -72,5 +84,36 @@ SECURITY_KEY_ROTATION_COMPLETE.md
 # Security sensitive files
 *.key
 *.pem
+*.p12
+*.pfx
+*.cer
+*.crt
 secrets.json
-.vercel
+secrets.*.json
+credentials.json
+auth.json
+
+# API Keys and tokens
+*apikey*
+*api-key*
+*api_key*
+*token*
+*secret*
+*password*
+*credentials*
+
+# Backup files that might contain sensitive data
+*.backup
+*.bak
+*.old
+*.orig
+
+# Database dumps
+*.sql
+*.dump
+*.sqlite
+*.db
+
+# Temporary test files with credentials
+test-*.html
+*-test.html
