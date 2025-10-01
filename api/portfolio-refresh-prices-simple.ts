@@ -50,7 +50,6 @@ async function fetchStockData(symbol: string): Promise<{ price: number; beta: nu
       console.warn(`Failed to fetch beta for ${symbol}, using default 1.0:`, betaError);
     }
 
-    console.log(`Fetched data for ${symbol}: price=$${price}, beta=${beta}, name=${name}`);
     return { price, beta, name };
   } catch (error) {
     console.error(`Failed to fetch data for ${symbol}:`, error);
@@ -79,15 +78,11 @@ async function estimateOptionPrice(optionSymbol: string, underlyingSymbol: strin
     const inTheMoney = isCall ? (stockPrice > strikePrice) : (stockPrice < strikePrice);
 
     // Simple estimation
-    let estimatedPrice: number;
     if (inTheMoney) {
-      estimatedPrice = Math.abs(stockPrice - strikePrice) + (stockPrice * 0.02);
+      return Math.abs(stockPrice - strikePrice) + (stockPrice * 0.02);
     } else {
-      estimatedPrice = stockPrice * 0.02;
+      return stockPrice * 0.02;
     }
-
-    console.log(`Estimated price for ${optionSymbol}: $${estimatedPrice}`);
-    return estimatedPrice;
   } catch (error) {
     console.error(`Failed to estimate option price for ${optionSymbol}:`, error);
     return null;
@@ -96,7 +91,7 @@ async function estimateOptionPrice(optionSymbol: string, underlyingSymbol: strin
 
 /**
  * Refresh market prices for portfolio holdings
- * POST /api/portfolio/:id/refresh-prices
+ * POST /api/portfolio-refresh-prices-simple?portfolioId=xxx
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Set CORS headers
@@ -114,8 +109,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return;
   }
 
-  // Extract portfolio ID from query parameter (Vercel dynamic route)
-  const portfolioId = req.query.id as string;
+  const portfolioId = req.query.portfolioId as string;
 
   if (!portfolioId) {
     return res.status(400).json({ error: 'Portfolio ID is required' });
@@ -174,8 +168,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    console.log(`Starting price refresh for portfolio ${portfolioId} (user: ${user.id})`);
-
     // Fetch stock holdings
     const { data: stocks, error: stocksError } = await supabaseAdmin
       .from('stock_holdings')
@@ -198,94 +190,68 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(500).json({ error: 'Failed to fetch options' });
     }
 
-    console.log(`Found ${(stocks || []).length} stocks and ${(options || []).length} options to update`);
-
     // Update stock prices
     let stocksUpdated = 0;
-    let stocksFailed = 0;
     const stockUpdatePromises = (stocks || []).map(async (stock: any) => {
-      try {
-        const stockData = await fetchStockData(stock.symbol);
+      const stockData = await fetchStockData(stock.symbol);
 
-        if (stockData) {
-          const { error: updateError } = await supabaseAdmin
-            .from('stock_holdings')
-            .update({
-              current_price: stockData.price.toFixed(2),
-              beta: stockData.beta.toFixed(2),
-              name: stockData.name,
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', stock.id);
+      if (stockData) {
+        const { error: updateError } = await supabaseAdmin
+          .from('stock_holdings')
+          .update({
+            current_price: stockData.price.toFixed(2),
+            beta: stockData.beta.toFixed(2),
+            name: stockData.name,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', stock.id);
 
-          if (!updateError) {
-            stocksUpdated++;
-            console.log(`✓ Updated ${stock.symbol}: $${stockData.price.toFixed(2)}, beta: ${stockData.beta.toFixed(2)}`);
-          } else {
-            stocksFailed++;
-            console.error(`✗ Failed to update ${stock.symbol}:`, updateError);
-          }
+        if (!updateError) {
+          stocksUpdated++;
+          console.log(`Updated ${stock.symbol}: $${stockData.price.toFixed(2)}, beta: ${stockData.beta.toFixed(2)}`);
         } else {
-          stocksFailed++;
-          console.error(`✗ Failed to fetch data for ${stock.symbol}`);
+          console.error(`Failed to update ${stock.symbol}:`, updateError);
         }
-      } catch (error) {
-        stocksFailed++;
-        console.error(`✗ Error updating ${stock.symbol}:`, error);
       }
     });
 
     // Update option prices
     let optionsUpdated = 0;
-    let optionsFailed = 0;
     const optionUpdatePromises = (options || []).map(async (option: any) => {
-      try {
-        const estimatedPrice = await estimateOptionPrice(option.option_symbol, option.underlying_symbol);
+      const estimatedPrice = await estimateOptionPrice(option.option_symbol, option.underlying_symbol);
 
-        if (estimatedPrice !== null) {
-          const { error: updateError } = await supabaseAdmin
-            .from('option_holdings')
-            .update({
-              current_price: estimatedPrice.toFixed(2),
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', option.id);
+      if (estimatedPrice !== null) {
+        const { error: updateError } = await supabaseAdmin
+          .from('option_holdings')
+          .update({
+            current_price: estimatedPrice.toFixed(2),
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', option.id);
 
-          if (!updateError) {
-            optionsUpdated++;
-            console.log(`✓ Updated option ${option.option_symbol}: $${estimatedPrice.toFixed(2)}`);
-          } else {
-            optionsFailed++;
-            console.error(`✗ Failed to update option ${option.option_symbol}:`, updateError);
-          }
+        if (!updateError) {
+          optionsUpdated++;
+          console.log(`Updated option ${option.option_symbol}: $${estimatedPrice.toFixed(2)}`);
         } else {
-          optionsFailed++;
-          console.error(`✗ Failed to estimate price for option ${option.option_symbol}`);
+          console.error(`Failed to update option ${option.option_symbol}:`, updateError);
         }
-      } catch (error) {
-        optionsFailed++;
-        console.error(`✗ Error updating option ${option.option_symbol}:`, error);
       }
     });
 
     // Execute all updates in parallel
     await Promise.all([...stockUpdatePromises, ...optionUpdatePromises]);
 
-    console.log(`Price refresh complete: ${stocksUpdated}/${(stocks || []).length} stocks, ${optionsUpdated}/${(options || []).length} options updated`);
-
     res.status(200).json({
       success: true,
       stocksUpdated,
       optionsUpdated,
-      stocksFailed,
-      optionsFailed,
       totalStocks: (stocks || []).length,
       totalOptions: (options || []).length,
-      message: `成功更新 ${stocksUpdated} 个股票价格和 ${optionsUpdated} 个期权价格`,
+      message: `Successfully refreshed ${stocksUpdated} stock prices and ${optionsUpdated} option prices`,
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Error in POST /api/portfolio/:id/refresh-prices:', error);
+    console.error('Error in POST /portfolio-refresh-prices-simple:', error);
     res.status(500).json({
       error: 'Internal server error',
       message: error instanceof Error ? error.message : 'Unknown error occurred'
