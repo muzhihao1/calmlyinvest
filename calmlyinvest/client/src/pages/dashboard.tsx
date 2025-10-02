@@ -54,6 +54,18 @@ export default function Dashboard() {
     session,
     user
   });
+
+  // Log initial state and changes to portfolioId
+  useEffect(() => {
+    console.log("📍 Dashboard State Change:", {
+      portfolioId,
+      portfoliosLength: portfolios.length,
+      portfoliosLoading,
+      portfoliosError: portfoliosError ? String(portfoliosError) : null,
+      isGuest,
+      userId
+    });
+  }, [portfolioId, portfolios.length, portfoliosLoading, portfoliosError, isGuest, userId]);
   
 
   const { data: portfolio, isLoading: portfolioLoading } = useQuery<Portfolio>({
@@ -324,7 +336,53 @@ export default function Dashboard() {
   });
 
   const handleRefresh = async (silent: boolean = false) => {
+    console.log("🔄 handleRefresh called", {
+      portfolioId,
+      silent,
+      portfoliosLength: portfolios.length,
+      portfolios: portfolios,
+      isGuest,
+      userId,
+      portfoliosLoading,
+      portfoliosError
+    });
+
+    // Check if portfolios are still loading
+    if (portfoliosLoading) {
+      console.warn("⏳ Portfolios still loading, skipping refresh");
+      if (!silent) {
+        toast({
+          title: "请稍候",
+          description: "正在加载投资组合数据...",
+        });
+      }
+      return;
+    }
+
+    // Check for portfolio loading errors
+    if (portfoliosError) {
+      console.error("❌ Portfolio loading error:", portfoliosError);
+      if (!silent) {
+        toast({
+          title: "加载失败",
+          description: "无法加载投资组合，请刷新页面",
+          variant: "destructive",
+        });
+      }
+      return;
+    }
+
     if (!portfolioId) {
+      console.error("❌ No portfolioId, early return - DEBUG INFO:", {
+        portfoliosLength: portfolios.length,
+        portfolios: portfolios,
+        isGuest,
+        userId,
+        isLoggedIn,
+        session: session,
+        portfoliosLoading,
+        portfoliosError: portfoliosError ? String(portfoliosError) : null
+      });
       if (!silent) {
         toast({
           title: "无投资组合",
@@ -335,15 +393,27 @@ export default function Dashboard() {
       return;
     }
 
+    console.log(`🚀 Calling refresh-prices API for portfolio ${portfolioId}`);
+
     try {
       // Refresh market prices first
       const response = await apiRequest("POST", `/api/portfolio/${portfolioId}/refresh-prices`);
-      const result = await response.json();
+      console.log("📥 API response status:", response.status);
 
-      // Then refresh all data
+      const result = await response.json();
+      console.log("📊 API result:", result);
+
+      // Invalidate and refetch all queries to get fresh data
+      console.log("🔄 Invalidating React Query cache...");
+      await queryClient.invalidateQueries({
+        refetchType: 'active' // Refetch all active queries immediately
+      });
+
+      // Also explicitly refetch risk metrics
       await refetchRisk();
-      queryClient.invalidateQueries();
+
       setLastUpdate(new Date());
+      console.log("✅ Refresh complete! Cache invalidated and data refetched.");
 
       // Only show toast if not silent (manual refresh)
       if (!silent) {
@@ -353,6 +423,9 @@ export default function Dashboard() {
         });
       }
     } catch (error) {
+      console.error("❌ Refresh error:", error);
+      console.error("Error stack:", error instanceof Error ? error.stack : "No stack");
+
       // Always show error toast
       if (!silent) {
         toast({
