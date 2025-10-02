@@ -345,20 +345,21 @@ export async function updateStockPrices(holdings: StockHolding[]): Promise<Stock
   }
 }
 
-// Update option holdings with current prices and Greeks using Tradier API
+// Update option holdings with current prices and Greeks using Polygon.io API
 export async function updateOptionPrices(holdings: OptionHolding[]): Promise<OptionHolding[]> {
-  // Check if Tradier API is configured
-  const tradierApiKey = process.env.TRADIER_API_KEY;
+  // Check if Polygon.io API is configured
+  const polygonApiKey = process.env.POLYGON_API_KEY;
 
-  if (!tradierApiKey) {
-    console.warn('⚠️ Tradier API not configured. Option prices will not be updated.');
-    console.warn('ℹ️ Set TRADIER_API_KEY and TRADIER_SANDBOX in environment variables.');
+  if (!polygonApiKey) {
+    console.warn('⚠️ Polygon.io API not configured. Option prices will not be updated.');
+    console.warn('ℹ️ Set POLYGON_API_KEY in environment variables.');
+    console.warn('ℹ️ Register at: https://polygon.io/ (instant, no approval needed)');
     return holdings; // Return unchanged holdings
   }
 
-  // Use Tradier API for accurate option prices and Greeks
-  const { TradierDataProvider } = await import('./tradier-provider');
-  const tradier = new TradierDataProvider();
+  // Use Polygon.io API for accurate option prices and Greeks
+  const { PolygonDataProvider } = await import('./polygon-provider');
+  const polygon = new PolygonDataProvider();
 
   const updatedHoldings = await Promise.all(
     holdings.map(async holding => {
@@ -366,7 +367,7 @@ export async function updateOptionPrices(holdings: OptionHolding[]): Promise<Opt
         console.log(`📊 Updating option: ${holding.optionSymbol}`);
 
         // Get both price and Greeks in one API call (more efficient)
-        const quote = await tradier.getOptionQuote(holding.optionSymbol);
+        const quote = await polygon.getOptionQuote(holding.optionSymbol);
 
         return {
           ...holding,
@@ -376,7 +377,7 @@ export async function updateOptionPrices(holdings: OptionHolding[]): Promise<Opt
       } catch (error) {
         console.error(`❌ Failed to update ${holding.optionSymbol}:`, error);
 
-        // If Tradier fails, try fallback to YahooFinance (less accurate)
+        // If Polygon.io fails, try fallback to YahooFinance (less accurate)
         try {
           console.log(`🔄 Trying fallback provider for ${holding.optionSymbol}...`);
           const provider = getMarketDataProvider();
