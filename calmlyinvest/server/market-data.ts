@@ -345,21 +345,21 @@ export async function updateStockPrices(holdings: StockHolding[]): Promise<Stock
   }
 }
 
-// Update option holdings with current prices and Greeks using Polygon.io API
+// Update option holdings with current prices and Greeks using Market Data API
 export async function updateOptionPrices(holdings: OptionHolding[]): Promise<OptionHolding[]> {
-  // Check if Polygon.io API is configured
-  const polygonApiKey = process.env.POLYGON_API_KEY;
+  // Check if Market Data API is configured
+  const marketDataToken = process.env.MARKETDATA_API_TOKEN;
 
-  if (!polygonApiKey) {
-    console.warn('⚠️ Polygon.io API not configured. Option prices will not be updated.');
-    console.warn('ℹ️ Set POLYGON_API_KEY in environment variables.');
-    console.warn('ℹ️ Register at: https://polygon.io/ (instant, no approval needed)');
+  if (!marketDataToken) {
+    console.warn('⚠️ Market Data API not configured. Option prices will not be updated.');
+    console.warn('ℹ️ Set MARKETDATA_API_TOKEN in environment variables.');
+    console.warn('ℹ️ Register at: https://www.marketdata.app/ (30-day free trial, no credit card)');
     return holdings; // Return unchanged holdings
   }
 
-  // Use Polygon.io API for accurate option prices and Greeks
-  const { PolygonDataProvider } = await import('./polygon-provider');
-  const polygon = new PolygonDataProvider();
+  // Use Market Data API for real-time option prices and Greeks
+  const { MarketDataProvider } = await import('./marketdata-provider');
+  const marketData = new MarketDataProvider();
 
   const updatedHoldings = await Promise.all(
     holdings.map(async holding => {
@@ -367,7 +367,7 @@ export async function updateOptionPrices(holdings: OptionHolding[]): Promise<Opt
         console.log(`📊 Updating option: ${holding.optionSymbol}`);
 
         // Get both price and Greeks in one API call (more efficient)
-        const quote = await polygon.getOptionQuote(holding.optionSymbol);
+        const quote = await marketData.getOptionQuote(holding.optionSymbol);
 
         return {
           ...holding,
@@ -377,7 +377,7 @@ export async function updateOptionPrices(holdings: OptionHolding[]): Promise<Opt
       } catch (error) {
         console.error(`❌ Failed to update ${holding.optionSymbol}:`, error);
 
-        // If Polygon.io fails, try fallback to YahooFinance (less accurate)
+        // If Market Data API fails, try fallback to YahooFinance (less accurate)
         try {
           console.log(`🔄 Trying fallback provider for ${holding.optionSymbol}...`);
           const provider = getMarketDataProvider();
