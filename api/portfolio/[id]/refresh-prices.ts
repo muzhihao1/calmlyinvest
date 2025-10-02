@@ -59,8 +59,123 @@ async function fetchStockData(symbol: string): Promise<{ price: number; beta: nu
 }
 
 /**
+ * Convert internal option symbol format to Market Data API format
+ *
+ * Internal format: "MSFT 251010P515"
+ * Market Data format: "MSFT251010P00515000"
+ */
+function convertToMarketDataSymbol(optionSymbol: string): string {
+  try {
+    const parts = optionSymbol.trim().split(' ');
+
+    if (parts.length !== 2) {
+      throw new Error(`Invalid option symbol format: ${optionSymbol}`);
+    }
+
+    const underlying = parts[0].toUpperCase();
+    const optionPart = parts[1];
+
+    // Parse option string: YYMMDD + C/P + strike
+    const match = optionPart.match(/^(\d{6})([CP])(\d+(?:\.\d+)?)$/);
+
+    if (!match) {
+      throw new Error(`Invalid option format: ${optionPart}`);
+    }
+
+    const [, date, type, strike] = match;
+
+    // Convert strike to 8-digit format (multiply by 1000)
+    const strikeNum = parseFloat(strike);
+    const strikeFormatted = Math.round(strikeNum * 1000).toString().padStart(8, '0');
+
+    // Market Data format: UNDERLYING + YYMMDD + C/P + STRIKE
+    const marketDataSymbol = `${underlying}${date}${type}${strikeFormatted}`;
+
+    console.log(`📊 Converted ${optionSymbol} → ${marketDataSymbol}`);
+
+    return marketDataSymbol;
+  } catch (error) {
+    console.error(`❌ Failed to convert option symbol: ${optionSymbol}`, error);
+    throw error;
+  }
+}
+
+/**
+ * Get option quote with Greeks from Market Data API
+ * Returns both price and Delta value for accurate option tracking
+ */
+async function getOptionQuoteFromMarketData(optionSymbol: string): Promise<{
+  price: number;
+  delta: number;
+} | null> {
+  const marketDataToken = process.env.MARKETDATA_API_TOKEN;
+
+  if (!marketDataToken) {
+    console.warn('⚠️ MARKETDATA_API_TOKEN not configured. Using fallback estimation.');
+    return null;
+  }
+
+  try {
+    const marketDataSymbol = convertToMarketDataSymbol(optionSymbol);
+
+    console.log(`📡 Fetching option data from Market Data API: ${marketDataSymbol}`);
+
+    // Dynamically import axios
+    const axios = (await import('axios')).default;
+
+    const response = await axios.get(
+      `https://api.marketdata.app/v1/options/quotes/${marketDataSymbol}/`,
+      {
+        headers: {
+          'Authorization': `Bearer ${marketDataToken}`,
+          'Accept': 'application/json',
+        },
+        timeout: 10000,
+      }
+    );
+
+    if (response.data.s !== 'ok') {
+      throw new Error(`Invalid response status: ${response.data.s}`);
+    }
+
+    const data = response.data;
+
+    if (!data.mid || data.mid.length === 0) {
+      throw new Error('No data returned from Market Data API');
+    }
+
+    // Determine option price (prefer mid, fallback to last or avg of bid/ask)
+    let price = data.mid[0];
+
+    if (!price || price === 0) {
+      if (data.last && data.last[0] > 0) {
+        price = data.last[0];
+        console.log(`💰 Price from last: $${price}`);
+      } else if (data.bid && data.ask && data.bid[0] > 0 && data.ask[0] > 0) {
+        price = (data.bid[0] + data.ask[0]) / 2;
+        console.log(`💰 Price from bid/ask avg: $${price}`);
+      } else {
+        throw new Error('No valid price data available');
+      }
+    } else {
+      console.log(`💰 Price from mid: $${price}`);
+    }
+
+    // Extract Delta
+    const delta = data.delta && data.delta[0] !== undefined ? data.delta[0] : 0;
+
+    console.log(`✅ Market Data API: ${optionSymbol} = $${price.toFixed(2)}, Delta=${delta.toFixed(4)}`);
+
+    return { price, delta };
+  } catch (error) {
+    console.error(`❌ Failed to fetch from Market Data API for ${optionSymbol}:`, error);
+    return null;
+  }
+}
+
+/**
  * Estimate option price based on underlying stock price
- * Note: This is a simplified estimation. Full option chain data would require more complex implementation.
+ * Fallback when Market Data API is not available
  */
 async function estimateOptionPrice(optionSymbol: string, underlyingSymbol: string): Promise<number | null> {
   try {
@@ -235,32 +350,60 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     });
 
-    // Update option prices
+    // Update option prices with real market data (including Greeks)
     let optionsUpdated = 0;
     let optionsFailed = 0;
     const optionUpdatePromises = (options || []).map(async (option: any) => {
       try {
-        const estimatedPrice = await estimateOptionPrice(option.option_symbol, option.underlying_symbol);
+        console.log(`🔄 Updating option: ${option.option_symbol}`);
 
-        if (estimatedPrice !== null) {
+        // Try to get real market data with Greeks (Delta) first
+        const marketDataQuote = await getOptionQuoteFromMarketData(option.option_symbol);
+
+        if (marketDataQuote) {
+          // Update with real market data (price + Delta)
           const { error: updateError } = await supabaseAdmin
             .from('option_holdings')
             .update({
-              current_price: estimatedPrice.toFixed(2),
+              current_price: marketDataQuote.price.toFixed(2),
+              delta_value: marketDataQuote.delta.toFixed(4), // ✅ Update Delta too!
               updated_at: new Date().toISOString()
             })
             .eq('id', option.id);
 
           if (!updateError) {
             optionsUpdated++;
-            console.log(`✓ Updated option ${option.option_symbol}: $${estimatedPrice.toFixed(2)}`);
+            console.log(`✓ Updated option ${option.option_symbol}: Price=$${marketDataQuote.price.toFixed(2)}, Delta=${marketDataQuote.delta.toFixed(4)}`);
           } else {
             optionsFailed++;
             console.error(`✗ Failed to update option ${option.option_symbol}:`, updateError);
           }
         } else {
-          optionsFailed++;
-          console.error(`✗ Failed to estimate price for option ${option.option_symbol}`);
+          // Fallback to estimation (no Delta update)
+          console.log(`⚠️ Falling back to estimation for ${option.option_symbol}`);
+          const estimatedPrice = await estimateOptionPrice(option.option_symbol, option.underlying_symbol);
+
+          if (estimatedPrice !== null) {
+            const { error: updateError } = await supabaseAdmin
+              .from('option_holdings')
+              .update({
+                current_price: estimatedPrice.toFixed(2),
+                updated_at: new Date().toISOString()
+                // Note: Delta not updated when using fallback estimation
+              })
+              .eq('id', option.id);
+
+            if (!updateError) {
+              optionsUpdated++;
+              console.log(`✓ Updated option ${option.option_symbol} (estimated): $${estimatedPrice.toFixed(2)}`);
+            } else {
+              optionsFailed++;
+              console.error(`✗ Failed to update option ${option.option_symbol}:`, updateError);
+            }
+          } else {
+            optionsFailed++;
+            console.error(`✗ Failed to estimate price for option ${option.option_symbol}`);
+          }
         }
       } catch (error) {
         optionsFailed++;
