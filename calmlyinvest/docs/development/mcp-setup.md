@@ -6,9 +6,9 @@
 
 ## 🔑 您的配置信息
 
-- **项目 URL**: `https://hsfthqchyupkbmazcuis.supabase.co`
-- **项目 Ref**: `hsfthqchyupkbmazcuis`
-- **访问令牌**: `sbp_aeb93df390eb119ab40beeafcac4c59c8ac6e3e3`
+- **项目 URL**: `https://your-project-id.supabase.co`
+- **项目 Ref**: `your-project-id`
+- **访问令牌**: `sbp_your_supabase_access_token_here`
 
 ## 📝 安装步骤
 
@@ -35,10 +35,10 @@
         "-y",
         "@supabase/mcp-server-supabase@latest",
         "--read-only",
-        "--project-ref=hsfthqchyupkbmazcuis"
+        "--project-ref=your-project-id"
       ],
       "env": {
-        "SUPABASE_ACCESS_TOKEN": "sbp_aeb93df390eb119ab40beeafcac4c59c8ac6e3e3"
+        "SUPABASE_ACCESS_TOKEN": "sbp_your_supabase_access_token_here"
       }
     }
   }
@@ -95,10 +95,10 @@
 如果看到红色状态或连接失败：
 
 1. **检查网络连接**
-   - 确保能正常访问 `https://hsfthqchyupkbmazcuis.supabase.co`
+   - 确保能正常访问 `https://your-project-id.supabase.co`
 
 2. **验证令牌**
-   - 确认访问令牌 `sbp_aeb93df390eb119ab40beeafcac4c59c8ac6e3e3` 是否有效
+   - 确认访问令牌 `sbp_your_supabase_access_token_here` 是否有效
    - 检查令牌是否有足够权限
 
 3. **重新安装包**

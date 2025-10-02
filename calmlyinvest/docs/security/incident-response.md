@@ -10,7 +10,7 @@ Your Supabase service role key was exposed in a public GitHub repository. This k
 ## Actions You Must Take NOW
 
 ### 1. Rotate Your Supabase Keys Immediately
-1. Go to https://app.supabase.com/project/hsfthqchyupkbmazcuis/settings/api
+1. Go to https://app.supabase.com/project/your-project-id/settings/api
 2. Under "Project API keys", click "Roll" next to both:
    - `anon` key (public key)
    - `service_role` key (CRITICAL - this was exposed)
@@ -24,7 +24,7 @@ Your Supabase service role key was exposed in a public GitHub repository. This k
 
 2. Update `.env` with the new anon key:
    ```bash
-   SUPABASE_URL=https://hsfthqchyupkbmazcuis.supabase.co
+   SUPABASE_URL=https://your-project-id.supabase.co
    SUPABASE_ANON_KEY=your_new_anon_key_here
    ```
 

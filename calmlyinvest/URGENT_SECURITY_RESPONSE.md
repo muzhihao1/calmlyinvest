@@ -30,7 +30,7 @@
 
 ```bash
 # 1. 登录Supabase Dashboard
-https://supabase.com/dashboard/project/hsfthqchyupkbmazcuis
+https://supabase.com/dashboard/project/your-project-id
 
 # 2. 导航到: Settings > API
 # 3. 点击 "Reset" 按钮重置以下密钥:

@@ -42,8 +42,8 @@ git clone --mirror https://github.com/muzhihao1/calmlyinvest.git
 wget https://repo1.maven.org/maven2/com/madgag/bfg/1.14.0/bfg-1.14.0.jar
 
 # 3. 创建包含所有泄露密钥的文件
-echo "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhzZnRocWNoeXVwa2JtYXpjdWlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI1MTg0NjUsImV4cCI6MjA2ODA5NDQ2NX0.GAajoAAyNgbq5SVPhtL99NFIoycaLjXbcCJJqc8wLrQ" > passwords.txt
-echo "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhzZnRocWNoeXVwa2JtYXpjdWlzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MjUxODQ2NSwiZXhwIjoyMDY4MDk0NDY1fQ.II5EEdkqznfNNRkZrr22XosV3w5qaj4jTkPiTd65EPk" >> passwords.txt
+echo "your_old_leaked_anon_key_here" > passwords.txt
+echo "your_old_leaked_service_role_key_here" >> passwords.txt
 
 # 4. 运行 BFG 清理密钥
 java -jar bfg-1.14.0.jar --replace-text passwords.txt calmlyinvest.git

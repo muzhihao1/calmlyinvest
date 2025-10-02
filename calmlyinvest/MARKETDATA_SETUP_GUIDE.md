@@ -39,7 +39,7 @@ https://www.marketdata.app/
 
 ```
 示例 Token：
-RnB5a21laExKVEFReVhudE1OeXJoY210TDlxc2NPcV9ON2JtVHk4WDlsaz0
+your_marketdata_api_token_here_1234567890abcdef
 ```
 
 ---
@@ -58,7 +58,7 @@ MARKETDATA_API_TOKEN=粘贴您的Token到这里
 **示例**：
 ```bash
 # Market Data API Configuration
-MARKETDATA_API_TOKEN=RnB5a21laExKVEFReVhudE1OeXJoY210TDlxc2NPcV9ON2JtVHk4WDlsaz0
+MARKETDATA_API_TOKEN=your_marketdata_api_token_here_1234567890abcdef
 ```
 
 ### 保存文件

@@ -39,7 +39,7 @@
 ## 立即解决方案
 
 ### 方法1: 直接在Supabase SQL编辑器运行
-1. 登录 [Supabase Dashboard](https://app.supabase.com/project/hsfthqchyupkbmazcuis)
+1. 登录 [Supabase Dashboard](https://app.supabase.com/project/your-project-id)
 2. 进入 SQL Editor
 3. 运行 `scripts/direct-sql-update.sql` 中的代码
 4. 刷新应用页面

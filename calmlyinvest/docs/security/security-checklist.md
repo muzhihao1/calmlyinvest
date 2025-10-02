@@ -50,7 +50,7 @@ setup-env.sh
 ### 5. Documentation Files
 - [ ] Ensure documentation uses placeholder values, not real keys
 - [ ] Example: `SUPABASE_URL=https://your-project.supabase.co`
-- [ ] Not: `SUPABASE_URL=https://hsfthqchyupkbmazcuis.supabase.co`
+- [ ] Not: `SUPABASE_URL=https://your-project-id.supabase.co`
 
 ## 🔍 Quick Security Scan Commands
 

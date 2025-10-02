@@ -28,15 +28,15 @@
 
 ```bash
 # Supabase URL
-VITE_SUPABASE_URL=https://hsfthqchyupkbmazcuis.supabase.co
-SUPABASE_URL=https://hsfthqchyupkbmazcuis.supabase.co
+VITE_SUPABASE_URL=https://your-project-id.supabase.co
+SUPABASE_URL=https://your-project-id.supabase.co
 
 # Supabase ANON Key (公开可见的客户端key)
-VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhzZnRocWNoeXVwa2JtYXpjdWlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM5NDcxMzQsImV4cCI6MjA2OTUyMzEzNH0.lgEh9aI69XXxSB_V1QpXLyNP-CCXFfxTHhQMfN3bxF0
-SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhzZnRocWNoeXVwa2JtYXpjdWlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM5NDcxMzQsImV4cCI6MjA2OTUyMzEzNH0.lgEh9aI69XXxSB_V1QpXLyNP-CCXFfxTHhQMfN3bxF0
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key_here
+SUPABASE_ANON_KEY=your_supabase_anon_key_here
 
 # Supabase Service Role Key (服务端私钥，仅用于API functions)
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhzZnRocWNoeXVwa2JtYXpjdWlzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1Mzk0NzEzNCwiZXhwIjoyMDY5NTIzMTM0fQ.c3mXGrxU4lrgGBcZp1465c-qJYrrf_mi6vL2c_kerE8
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key_here
 ```
 
 ### 步骤4：验证 JWT Payload
