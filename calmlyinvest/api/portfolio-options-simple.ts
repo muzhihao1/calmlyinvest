@@ -2,9 +2,9 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 
 // Initialize Supabase client
-const supabaseUrl = process.env.SUPABASE_URL!;
+const supabaseUrl = (process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL)!;
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 // In-memory storage for guest mode (shared between functions)
 const guestOptions: Record<string, any[]> = {};
@@ -47,6 +47,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         const token = authHeader.replace('Bearer ', '');
+
+        // Create Supabase client with service key for this request
+        const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
         // Verify the user with Supabase
         const { data: { user }, error: authError } = await supabase.auth.getUser(token);
@@ -150,6 +153,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         const token = authHeader.replace('Bearer ', '');
+
+        // Create Supabase client with service key for this request
+        const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
         const { data: { user }, error: authError } = await supabase.auth.getUser(token);
 
         if (authError || !user) {
