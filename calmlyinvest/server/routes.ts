@@ -560,7 +560,8 @@ export function registerRoutes(app: Express): void {
       let optionsUpdated = 0;
       for (const option of updatedOptions) {
         await storageWrapper.updateOptionHolding(option.id, {
-          currentPrice: option.currentPrice
+          currentPrice: option.currentPrice,
+          deltaValue: option.deltaValue  // 也更新Delta值！
         }, req);
         optionsUpdated++;
       }

@@ -79,7 +79,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     let optionsUpdated = 0;
     for (const option of updatedOptions) {
       await storage.updateOptionHolding(option.id, {
-        currentPrice: option.currentPrice
+        currentPrice: option.currentPrice,
+        deltaValue: option.deltaValue  // 也更新Delta值！
       }, req);
       optionsUpdated++;
     }
