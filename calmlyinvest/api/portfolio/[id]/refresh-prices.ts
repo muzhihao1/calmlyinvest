@@ -44,6 +44,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const storage = await getStorage(user, req);
   
   try {
+    console.log(`🚀 Starting price refresh for portfolio ${portfolioId}`);
+
     // Verify portfolio access
     const { portfolio, error, status } = await verifyPortfolioAccess(
       storage,
@@ -51,23 +53,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       user,
       req
     );
-    
+
     if (error) {
+      console.error(`❌ Portfolio access denied: ${error}`);
       sendError(res, error, status || 500);
       return;
     }
-    
+
     // Get current holdings
     const stockHoldings = await storage.getStockHoldings(portfolioId, req);
     const optionHoldings = await storage.getOptionHoldings(portfolioId, req);
+    console.log(`📦 Found ${stockHoldings.length} stocks and ${optionHoldings.length} options`);
     
     // Update prices from market data provider
+    console.log(`🔄 Fetching prices for ${stockHoldings.length} stocks and ${optionHoldings.length} options`);
     const updatedStocks = await updateStockPrices(stockHoldings);
     const updatedOptions = await updateOptionPrices(optionHoldings);
-    
+    console.log(`✅ Received ${updatedStocks.length} updated stocks and ${updatedOptions.length} updated options`);
+
     // Update each holding in storage
     let stocksUpdated = 0;
     for (const stock of updatedStocks) {
+      console.log(`📊 Updating stock ${stock.symbol}: $${stock.currentPrice}`);
       await storage.updateStockHolding(stock.id, {
         currentPrice: stock.currentPrice,
         beta: stock.beta,
@@ -75,16 +82,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }, req);
       stocksUpdated++;
     }
-    
+
     let optionsUpdated = 0;
     for (const option of updatedOptions) {
+      console.log(`📊 Updating option ${option.optionSymbol}: Price=$${option.currentPrice}, Delta=${option.deltaValue}`);
       await storage.updateOptionHolding(option.id, {
         currentPrice: option.currentPrice,
         deltaValue: option.deltaValue  // 也更新Delta值！
       }, req);
+      console.log(`✅ Updated option ${option.id} in database`);
       optionsUpdated++;
     }
     
+    console.log(`✅ Price refresh complete: ${stocksUpdated} stocks, ${optionsUpdated} options`);
+
     sendSuccess(res, {
       success: true,
       stocksUpdated,
@@ -92,7 +103,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       message: `Updated ${stocksUpdated} stock prices and ${optionsUpdated} option prices`
     });
   } catch (error) {
-    console.error("Price refresh error:", error);
+    console.error("❌ Price refresh error:", error);
+    console.error("Error stack:", error instanceof Error ? error.stack : "No stack trace");
     sendError(res, error instanceof Error ? error.message : "Failed to refresh prices", 500);
   }
 }
