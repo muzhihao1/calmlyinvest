@@ -79,15 +79,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       // Fetch options from database
+      console.log('[portfolio-options-simple] Fetching options for portfolio:', portfolioId);
       const { data: options, error: fetchError } = await supabaseAdmin
         .from('option_holdings')
         .select('*')
         .eq('portfolio_id', portfolioId);
 
       if (fetchError) {
-        console.error('Error fetching options:', fetchError);
+        console.error('[portfolio-options-simple] Error fetching options:', fetchError);
         return res.status(500).json({ error: 'Failed to fetch options', details: fetchError.message });
       }
+
+      console.log('[portfolio-options-simple] Fetched options:', {
+        count: options?.length || 0,
+        sample: options?.[0] ? {
+          optionSymbol: options[0].option_symbol,
+          currentPrice: options[0].current_price,
+          deltaValue: options[0].delta_value
+        } : null
+      });
 
       // Transform snake_case to camelCase for frontend
       const transformedOptions = (options || []).map((option: any) => ({
@@ -106,6 +116,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         createdAt: option.created_at,
         updatedAt: option.updated_at
       }));
+
+      console.log('[portfolio-options-simple] Returning transformed options:', {
+        count: transformedOptions.length,
+        sample: transformedOptions[0] || null
+      });
 
       res.status(200).json(transformedOptions);
     } catch (error) {
