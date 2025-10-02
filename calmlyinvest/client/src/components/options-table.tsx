@@ -158,6 +158,7 @@ export function OptionsTable({ holdings, portfolioId }: OptionsTableProps) {
               <TableHead className="text-gray-400">执行价</TableHead>
               <TableHead className="text-gray-400">到期日</TableHead>
               <TableHead className="text-gray-400">Delta</TableHead>
+              <TableHead className="text-gray-400">未实现盈亏</TableHead>
               <TableHead className="text-gray-400">最大风险</TableHead>
               <TableHead className="text-gray-400">操作</TableHead>
             </TableRow>
@@ -172,6 +173,11 @@ export function OptionsTable({ holdings, portfolioId }: OptionsTableProps) {
               const priceChange = currentPrice - costPrice;
               const priceChangePercent = costPrice > 0 ? (priceChange / costPrice) * 100 : 0;
               const isPriceUp = priceChange > 0;
+
+              // Calculate unrealized P&L: (current - cost) × contracts × 100 × direction
+              const directionMultiplier = holding.direction === "BUY" ? 1 : -1;
+              const unrealizedPL = priceChange * Math.abs(holding.contracts) * 100 * directionMultiplier;
+              const isProfitable = unrealizedPL > 0;
 
               return (
                 <TableRow key={holding.id} className="border-gray-700 hover:bg-slate-700/50">
@@ -206,6 +212,11 @@ export function OptionsTable({ holdings, portfolioId }: OptionsTableProps) {
                     </div>
                   </TableCell>
                   <TableCell className="text-white">{holding.deltaValue}</TableCell>
+                  <TableCell>
+                    <div className={`font-semibold ${isProfitable ? "text-green-500" : unrealizedPL < 0 ? "text-red-500" : "text-gray-400"}`}>
+                      {isProfitable ? "+" : ""}{unrealizedPL >= 0 ? "$" : "-$"}{Math.abs(unrealizedPL).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </div>
+                  </TableCell>
                   <TableCell className="text-red-500 font-semibold">
                     ${maxRisk.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                   </TableCell>
