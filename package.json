@@ -5,7 +5,9 @@
   "private": true,
   "dependencies": {
     "@vercel/node": "^3.0.0",
-    "yahoo-finance2": "^2.13.3"
+    "yahoo-finance2": "^2.13.3",
+    "axios": "^1.12.2",
+    "@supabase/supabase-js": "^2.39.0"
   },
   "engines": {
     "node": ">=18.0.0"
