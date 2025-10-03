@@ -124,15 +124,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     let weightedBeta = 0;
     let maxStockValue = 0;
     let maxStockSymbol = '';
+    let totalStockUnrealizedPnL = 0;
 
     (stocks || []).forEach((stock: any) => {
       const quantity = parseFloat(stock.quantity || '0');
       const currentPrice = parseFloat(stock.current_price || '0');
+      const costPrice = parseFloat(stock.cost_price || '0');
       const beta = parseFloat(stock.beta || '1.0');
 
       const stockValue = quantity * currentPrice;
       totalStockValue += stockValue;
       weightedBeta += stockValue * beta;
+
+      // Calculate unrealized P&L for stocks
+      totalStockUnrealizedPnL += (currentPrice - costPrice) * quantity;
 
       if (stockValue > maxStockValue) {
         maxStockValue = stockValue;
@@ -143,6 +148,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Calculate option potential max loss (期权潜在最大亏损)
     let optionMaxLoss = 0;
     let totalOptionValue = 0;
+    let totalOptionUnrealizedPnL = 0;
     let hasHighRiskOptions = false;
     const highRiskStrategies: string[] = [];
 
@@ -154,8 +160,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const optionType = option.option_type; // 'PUT' or 'CALL'
       const direction = option.direction; // 'BUY' or 'SELL'
 
-      // Current market value
-      totalOptionValue += currentPrice * contracts * 100;
+      // Current market value - handle direction correctly
+      const optionMarketValue = currentPrice * contracts * 100;
+
+      if (direction === 'BUY') {
+        // Long option: positive market value (asset)
+        totalOptionValue += optionMarketValue;
+        // Unrealized P&L: profit when price goes up
+        totalOptionUnrealizedPnL += (currentPrice - costPrice) * contracts * 100;
+      } else if (direction === 'SELL') {
+        // Short option: negative market value (liability)
+        totalOptionValue -= optionMarketValue;
+        // Unrealized P&L: profit when price goes down
+        totalOptionUnrealizedPnL += (costPrice - currentPrice) * contracts * 100;
+      }
 
       // Calculate potential max loss based on strategy
       if (direction === 'SELL') {
@@ -242,6 +260,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     }
 
+    // Calculate total unrealized P&L
+    const totalUnrealizedPnL = totalStockUnrealizedPnL + totalOptionUnrealizedPnL;
+
     const riskMetrics = {
       portfolioId: portfolioId,
 
@@ -268,6 +289,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       totalOptionValue: totalOptionValue.toFixed(2),
       optionMaxLoss: optionMaxLoss.toFixed(2), // 期权潜在最大亏损
       totalRisk: totalRisk.toFixed(2), // 总风险敞口
+
+      // Unrealized P&L (NEW)
+      totalUnrealizedPnL: totalUnrealizedPnL.toFixed(2),
+      stockUnrealizedPnL: totalStockUnrealizedPnL.toFixed(2),
+      optionUnrealizedPnL: totalOptionUnrealizedPnL.toFixed(2),
 
       // Portfolio details
       totalEquity: totalEquity.toFixed(2),
