@@ -360,23 +360,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // Try to get real market data with Greeks (Delta) first
         const marketDataQuote = await getOptionQuoteFromMarketData(option.option_symbol);
 
+        console.log(`🔍 Market Data result for ${option.option_symbol}:`, marketDataQuote ? `Price=${marketDataQuote.price}, Delta=${marketDataQuote.delta}` : 'NULL (fallback will be used)');
+
         if (marketDataQuote) {
           // Update with real market data (price + Delta)
-          const { error: updateError } = await supabaseAdmin
+          console.log(`💾 Attempting DB update for option ID ${option.id}: current_price=${marketDataQuote.price.toFixed(2)}, delta_value=${marketDataQuote.delta.toFixed(4)}`);
+
+          const { data: updateResult, error: updateError } = await supabaseAdmin
             .from('option_holdings')
             .update({
               current_price: marketDataQuote.price.toFixed(2),
               delta_value: marketDataQuote.delta.toFixed(4), // ✅ Update Delta too!
               updated_at: new Date().toISOString()
             })
-            .eq('id', option.id);
+            .eq('id', option.id)
+            .select();
+
+          console.log(`📋 Update result:`, { updateResult, updateError });
 
           if (!updateError) {
             optionsUpdated++;
             console.log(`✓ Updated option ${option.option_symbol}: Price=$${marketDataQuote.price.toFixed(2)}, Delta=${marketDataQuote.delta.toFixed(4)}`);
           } else {
             optionsFailed++;
-            console.error(`✗ Failed to update option ${option.option_symbol}:`, updateError);
+            console.error(`✗ Failed to update option ${option.option_symbol}:`, JSON.stringify(updateError));
           }
         } else {
           // Fallback to estimation (no Delta update)
