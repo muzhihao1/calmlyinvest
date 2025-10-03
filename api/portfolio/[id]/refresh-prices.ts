@@ -61,28 +61,24 @@ async function fetchStockData(symbol: string): Promise<{ price: number; beta: nu
 /**
  * Convert internal option symbol format to Market Data API format
  *
- * Internal format: "MSFT 251010P515"
- * Market Data format: "MSFT251010P00515000"
+ * Supports both formats:
+ * - With space: "MSFT 251010P515"
+ * - Without space: "MSFT251010P515"
+ * Output: "MSFT251010P00515000"
  */
 function convertToMarketDataSymbol(optionSymbol: string): string {
   try {
-    const parts = optionSymbol.trim().split(' ');
+    const trimmed = optionSymbol.trim();
 
-    if (parts.length !== 2) {
+    // Try to parse format: TICKER + YYMMDD + C/P + STRIKE
+    // e.g., "MSFT251010P515" or "MSFT 251010P515"
+    const match = trimmed.match(/^([A-Z]+)\s?(\d{6})([CP])(\d+(?:\.\d+)?)$/);
+
+    if (!match) {
       throw new Error(`Invalid option symbol format: ${optionSymbol}`);
     }
 
-    const underlying = parts[0].toUpperCase();
-    const optionPart = parts[1];
-
-    // Parse option string: YYMMDD + C/P + strike
-    const match = optionPart.match(/^(\d{6})([CP])(\d+(?:\.\d+)?)$/);
-
-    if (!match) {
-      throw new Error(`Invalid option format: ${optionPart}`);
-    }
-
-    const [, date, type, strike] = match;
+    const [, underlying, date, type, strike] = match;
 
     // Convert strike to 8-digit format (multiply by 1000)
     const strikeNum = parseFloat(strike);
