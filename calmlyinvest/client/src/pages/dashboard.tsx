@@ -722,6 +722,25 @@ export default function Dashboard() {
                 </div>
               </div>
               <div className="bg-slate-800 rounded-xl p-3 sm:p-4 border border-gray-700">
+                <div className="text-xs sm:text-sm text-gray-400">未实现盈亏</div>
+                <div className="text-xl sm:text-2xl font-bold">
+                  {portfoliosLoading || riskLoading || !actualRiskMetrics ? (
+                    <span className="text-gray-500">加载中...</span>
+                  ) : (
+                    <span className={parseFloat(actualRiskMetrics.totalUnrealizedPnL || "0") >= 0 ? "text-green-500" : "text-red-500"}>
+                      {parseFloat(actualRiskMetrics.totalUnrealizedPnL || "0") >= 0 ? "+" : ""}
+                      ${parseFloat(actualRiskMetrics.totalUnrealizedPnL || "0").toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  )}
+                </div>
+                {!riskLoading && actualRiskMetrics && (
+                  <div className="text-xs text-gray-400 mt-1">
+                    股票: ${parseFloat(actualRiskMetrics.stockUnrealizedPnL || "0").toLocaleString()} |
+                    期权: ${parseFloat(actualRiskMetrics.optionUnrealizedPnL || "0").toLocaleString()}
+                  </div>
+                )}
+              </div>
+              <div className="bg-slate-800 rounded-xl p-3 sm:p-4 border border-gray-700">
                 <div className="text-xs sm:text-sm text-gray-400 flex items-center">
                   现金余额
                   {isGuest && (
