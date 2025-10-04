@@ -179,11 +179,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(500).json({ error: 'Failed to fetch stocks' });
     }
 
-    // Fetch option holdings
-    const { data: options, error: optionsError } = await supabaseAdmin
+    // Fetch option holdings (only ACTIVE ones for price refresh)
+    const { data: options, error: optionsError} = await supabaseAdmin
       .from('option_holdings')
       .select('*')
-      .eq('portfolio_id', portfolioId);
+      .eq('portfolio_id', portfolioId)
+      .eq('status', 'ACTIVE');
 
     if (optionsError) {
       console.error('Options error:', optionsError);
@@ -251,7 +252,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { data: updatedOptions } = await supabaseAdmin
       .from('option_holdings')
       .select('*')
-      .eq('portfolio_id', portfolioId);
+      .eq('portfolio_id', portfolioId)
+      .eq('status', 'ACTIVE');
 
     // Calculate total stock value
     const totalStockValue = (updatedStocks || []).reduce((sum: number, stock: any) => {

@@ -78,12 +78,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(403).json({ error: 'Access denied' });
       }
 
-      // Fetch options from database
+      // Fetch options from database (only ACTIVE ones)
       console.log('[portfolio-options-simple] Fetching options for portfolio:', portfolioId);
       const { data: options, error: fetchError } = await supabaseAdmin
         .from('option_holdings')
         .select('*')
-        .eq('portfolio_id', portfolioId);
+        .eq('portfolio_id', portfolioId)
+        .eq('status', 'ACTIVE');
 
       if (fetchError) {
         console.error('[portfolio-options-simple] Error fetching options:', fetchError);

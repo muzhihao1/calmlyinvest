@@ -98,11 +98,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .select('quantity, current_price')
         .eq('portfolio_id', portfolioId);
 
-      // Fetch option holdings
+      // Fetch option holdings (only ACTIVE ones)
       const { data: options } = await supabaseAdmin
         .from('option_holdings')
         .select('contracts, current_price')
-        .eq('portfolio_id', portfolioId);
+        .eq('portfolio_id', portfolioId)
+        .eq('status', 'ACTIVE');
 
       // Calculate total stock value
       const totalStockValue = (stocks || []).reduce((sum: number, stock: any) => {

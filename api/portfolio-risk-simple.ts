@@ -103,11 +103,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(500).json({ error: 'Failed to fetch stocks' });
     }
 
-    // Fetch option holdings
+    // Fetch option holdings (only ACTIVE ones, exclude ROLLED and CLOSED)
     const { data: options, error: optionsError } = await supabaseAdmin
       .from('option_holdings')
       .select('*')
-      .eq('portfolio_id', portfolioId);
+      .eq('portfolio_id', portfolioId)
+      .eq('status', 'ACTIVE');
 
     if (optionsError) {
       console.error('Options error:', optionsError);
@@ -115,7 +116,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Calculate risk metrics based on professional risk management principles
-    const totalEquity = parseFloat(portfolio.total_equity || '0');
     const cashBalance = parseFloat(portfolio.cash_balance || '0');
     const marginUsed = parseFloat(portfolio.margin_used || '0');
 
@@ -196,6 +196,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const maxLoss = costPrice * contracts * 100;
         optionMaxLoss += maxLoss;
       }
+    });
+
+    // Calculate Net Liquidation Value (净清算价值)
+    // Net Liquidation = Cash + Stock Market Value + Option Market Value
+    const totalEquity = cashBalance + totalStockValue + totalOptionValue;
+
+    console.log('💰 Net Liquidation Calculation:', {
+      cash: cashBalance,
+      stockValue: totalStockValue,
+      optionValue: totalOptionValue,
+      totalEquity: totalEquity
     });
 
     // 杠杆率 = (正股价值 + 期权潜在最大亏损) / 总股本
