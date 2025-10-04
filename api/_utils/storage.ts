@@ -1,6 +1,6 @@
 import type { VercelRequest } from '@vercel/node';
 import { initializeStorage } from './storage-init';
-import { StorageInterface } from '../../shared/storage-interface';
+import { StorageInterface } from '../shared/storage-interface';
 import { User } from './auth';
 
 /**

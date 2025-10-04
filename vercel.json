@@ -1,9 +1,8 @@
 {
   "version": 2,
-  "installCommand": "npm install && cd calmlyinvest && npm install",
-  "buildCommand": "cd calmlyinvest && npm run build",
-  "devCommand": "cd calmlyinvest && npm run dev",
-  "outputDirectory": "calmlyinvest/dist/public",
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev",
+  "outputDirectory": "dist/public",
   "rewrites": [
     { "source": "/api/:path*", "destination": "/api/:path*" },
     { "source": "/((?!api).*)", "destination": "/index.html" }

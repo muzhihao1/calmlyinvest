@@ -2,7 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { setCorsHeaders, sendSuccess, sendError, handleValidationError } from '../_utils/response';
 import { requireAuth } from '../_utils/auth';
 import { getStorage } from '../_utils/storage';
-import { insertPortfolioSchema } from '../../shared/schema-supabase';
+import { insertPortfolioSchema } from '../shared/schema-supabase';
 import { z } from 'zod';
 
 /**
