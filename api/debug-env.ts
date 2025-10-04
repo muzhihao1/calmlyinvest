@@ -16,7 +16,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const debug = {
+    const debug: any = {
       timestamp: new Date().toISOString(),
       environment: process.env.VERCEL_ENV || 'unknown',
       nodeVersion: process.version,
