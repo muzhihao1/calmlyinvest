@@ -42,13 +42,35 @@ export function RolloverOptionDialog({
   // Form state
   const [closePrice, setClosePrice] = useState("");
   const [closeContracts, setCloseContracts] = useState("");
-  const [newOptionSymbol, setNewOptionSymbol] = useState("");
   const [newStrikePrice, setNewStrikePrice] = useState("");
   const [newExpirationDate, setNewExpirationDate] = useState("");
   const [openPrice, setOpenPrice] = useState("");
   const [openContracts, setOpenContracts] = useState("");
   const [fees, setFees] = useState("");
   const [notes, setNotes] = useState("");
+
+  // Auto-generate new option symbol based on inputs
+  const generateNewOptionSymbol = () => {
+    if (!option || !newStrikePrice || !newExpirationDate) return "";
+
+    const underlying = option.underlyingSymbol;
+    const optionType = option.optionType; // 'PUT' or 'CALL'
+    const typeCode = optionType === "PUT" ? "P" : "C";
+
+    // Convert date from YYYY-MM-DD to YYMMDD
+    const date = new Date(newExpirationDate);
+    const yy = date.getFullYear().toString().slice(-2);
+    const mm = (date.getMonth() + 1).toString().padStart(2, '0');
+    const dd = date.getDate().toString().padStart(2, '0');
+    const dateCode = yy + mm + dd;
+
+    // Format strike price (no decimals for display)
+    const strikeCode = Math.round(parseFloat(newStrikePrice)).toString();
+
+    return `${underlying}${dateCode}${typeCode}${strikeCode}`;
+  };
+
+  const newOptionSymbol = generateNewOptionSymbol();
 
   // Reset form when dialog opens/closes
   const handleOpenChange = (newOpen: boolean) => {
@@ -65,7 +87,6 @@ export function RolloverOptionDialog({
   const resetForm = () => {
     setClosePrice("");
     setCloseContracts("");
-    setNewOptionSymbol("");
     setNewStrikePrice("");
     setNewExpirationDate("");
     setOpenPrice("");
@@ -128,17 +149,20 @@ export function RolloverOptionDialog({
       queryClient.invalidateQueries({ queryKey: [`/api/portfolio/${portfolioId}/risk`] });
       queryClient.invalidateQueries({ queryKey: ['rollovers', portfolioId] });
 
+      // Safely access realizedPnl
+      const realizedPnl = data?.rollover?.realizedPnl || data?.realizedPnl || 0;
       toast({
         title: "Rollover 成功",
-        description: `实现盈亏: ${data.rollover.realizedPnl >= 0 ? '+' : ''}$${parseFloat(data.rollover.realizedPnl).toFixed(2)}`,
+        description: `实现盈亏: ${realizedPnl >= 0 ? '+' : ''}$${parseFloat(realizedPnl.toString()).toFixed(2)}`,
       });
 
       handleOpenChange(false);
     },
     onError: (error: any) => {
+      console.error("Rollover error:", error);
       toast({
         title: "Rollover 失败",
-        description: error.message || "操作失败，请稍后重试",
+        description: error.message || error.toString() || "操作失败，请稍后重试",
         variant: "destructive",
       });
     },
@@ -148,9 +172,18 @@ export function RolloverOptionDialog({
     e.preventDefault();
 
     // Validation
-    if (!closePrice || !closeContracts || !newOptionSymbol || !newStrikePrice || !newExpirationDate || !openPrice || !openContracts) {
+    if (!closePrice || !closeContracts || !newStrikePrice || !newExpirationDate || !openPrice || !openContracts) {
       toast({
         title: "请填写所有必填字段",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!newOptionSymbol) {
+      toast({
+        title: "无法生成期权代码",
+        description: "请检查执行价和到期日是否正确",
         variant: "destructive",
       });
       return;
@@ -254,18 +287,6 @@ export function RolloverOptionDialog({
             <div className="space-y-3">
               <h4 className="text-sm font-medium text-gray-300">新仓位信息</h4>
               <div className="space-y-3">
-                <div>
-                  <Label htmlFor="newOptionSymbol">期权代码 *</Label>
-                  <Input
-                    id="newOptionSymbol"
-                    type="text"
-                    value={newOptionSymbol}
-                    onChange={(e) => setNewOptionSymbol(e.target.value.toUpperCase())}
-                    className="bg-slate-900 border-gray-700"
-                    placeholder="例: NVDA251121P195"
-                    required
-                  />
-                </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <Label htmlFor="newStrikePrice">新执行价 *</Label>
@@ -292,6 +313,14 @@ export function RolloverOptionDialog({
                     />
                   </div>
                 </div>
+
+                {/* Auto-generated option symbol preview */}
+                {newOptionSymbol && (
+                  <div className="bg-slate-900/50 rounded p-2 border border-gray-700">
+                    <span className="text-xs text-gray-400">自动生成期权代码: </span>
+                    <span className="font-semibold text-green-500">{newOptionSymbol}</span>
+                  </div>
+                )}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <Label htmlFor="openPrice">开仓价格 *</Label>
