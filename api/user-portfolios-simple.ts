@@ -56,7 +56,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const token = authHeader.replace("Bearer ", "");
 
-    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+    const supabaseAuth = createClient(supabaseUrl!, supabaseAnonKey!, {
       global: {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -75,7 +75,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return;
     }
 
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+    const supabaseAdmin = createClient(supabaseUrl!, supabaseServiceKey!);
 
     const {
       data: portfolios,

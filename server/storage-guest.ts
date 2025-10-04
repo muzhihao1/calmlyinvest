@@ -78,6 +78,8 @@ let DEMO_OPTION_HOLDINGS: OptionHolding[] = [
     costPrice: "0.1200",
     currentPrice: "0.0800",
     deltaValue: "-0.3500",
+    status: "ACTIVE",
+    closedAt: null,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
@@ -94,6 +96,8 @@ let DEMO_OPTION_HOLDINGS: OptionHolding[] = [
     costPrice: "0.0500",
     currentPrice: "0.0650",
     deltaValue: "-0.2500",
+    status: "ACTIVE",
+    closedAt: null,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
@@ -200,6 +204,8 @@ export const guestStorage = {
       costPrice: data.costPrice,
       currentPrice: data.currentPrice || data.costPrice,
       deltaValue: data.deltaValue || "0",
+      status: "ACTIVE",
+      closedAt: null,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
