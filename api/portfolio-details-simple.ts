@@ -110,15 +110,38 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return sum + (stock.quantity * parseFloat(stock.current_price || '0'));
       }, 0);
 
-      // Calculate total option value (contracts * price * 100)
+      // Calculate total option value - direction-aware calculation
+      // BUY options: positive market value (asset)
+      // SELL options: negative market value (liability)
       const totalOptionValue = (options || []).reduce((sum: number, option: any) => {
-        return sum + (option.contracts * parseFloat(option.current_price || '0') * 100);
+        const contracts = parseFloat(option.contracts || '0');
+        const currentPrice = parseFloat(option.current_price || '0');
+        const optionMarketValue = currentPrice * contracts * 100;
+
+        if (option.direction === 'BUY') {
+          // Long option: positive market value (asset)
+          return sum + optionMarketValue;
+        } else if (option.direction === 'SELL') {
+          // Short option: negative market value (liability)
+          return sum - optionMarketValue;
+        }
+        return sum;
       }, 0);
 
       // Calculate total equity = stock value + option value + cash - margin
       const cashBalance = parseFloat(portfolio.cash_balance || '0');
       const marginUsed = parseFloat(portfolio.margin_used || '0');
       const calculatedTotalEquity = totalStockValue + totalOptionValue + cashBalance - marginUsed;
+
+      console.log('💰 [portfolio-details-simple] Net Liquidation Calculation:', {
+        portfolioId,
+        cash: cashBalance,
+        stockValue: totalStockValue,
+        optionValue: totalOptionValue,
+        margin: marginUsed,
+        totalEquity: calculatedTotalEquity,
+        optionCount: options?.length || 0
+      });
 
       // Transform snake_case to camelCase for frontend
       const transformedPortfolio = {
