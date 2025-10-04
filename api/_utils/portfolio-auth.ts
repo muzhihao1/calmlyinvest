@@ -1,4 +1,4 @@
-import { StorageInterface } from '../shared/storage-interface';
+import { StorageInterface } from '../../shared/storage-interface';
 import { User } from './auth';
 
 /**

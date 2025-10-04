@@ -3,7 +3,7 @@ import { setCorsHeaders, sendSuccess, sendError, handleValidationError } from '.
 import { requireAuth } from './_utils/auth';
 import { getStorage } from './_utils/storage';
 import { verifyPortfolioAccess } from './_utils/portfolio-auth';
-import { insertOptionHoldingSchema } from '../shared/schema-supabase';
+import { insertOptionHoldingSchema } from '../../shared/schema-supabase';
 import { z } from 'zod';
 
 /**
