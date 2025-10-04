@@ -1,20 +1,21 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Edit, Trash2, Clock } from "lucide-react";
+import { Edit, Trash2, Clock, Repeat } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth-context";
 import { EditOptionDialog } from "./edit-option-dialog";
+import { RolloverOptionDialog } from "./rollover-option-dialog";
 import type { OptionHolding } from "@shared/schema-types";
 
 interface OptionsTableProps {
@@ -28,6 +29,8 @@ export function OptionsTable({ holdings, portfolioId }: OptionsTableProps) {
   const { isGuest } = useAuth();
   const [editingOption, setEditingOption] = useState<OptionHolding | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [rolloverOption, setRolloverOption] = useState<OptionHolding | null>(null);
+  const [rolloverDialogOpen, setRolloverDialogOpen] = useState(false);
 
   // Helper function to delete option from localStorage for guest mode
   const deleteOptionFromLocalStorage = (optionId: string) => {
@@ -222,9 +225,21 @@ export function OptionsTable({ holdings, portfolioId }: OptionsTableProps) {
                   </TableCell>
                   <TableCell>
                     <div className="flex space-x-2">
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-green-500 hover:text-green-400"
+                        onClick={() => {
+                          setRolloverOption(holding);
+                          setRolloverDialogOpen(true);
+                        }}
+                        title="Rollover 期权"
+                      >
+                        <Repeat className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         className="text-primary hover:text-blue-400"
                         onClick={() => {
                           setEditingOption(holding);
@@ -233,9 +248,9 @@ export function OptionsTable({ holdings, portfolioId }: OptionsTableProps) {
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         className="text-red-500 hover:text-red-400"
                         onClick={() => deleteMutation.mutate(holding.id)}
                         disabled={deleteMutation.isPending}
@@ -252,10 +267,17 @@ export function OptionsTable({ holdings, portfolioId }: OptionsTableProps) {
         </div>
       </div>
       
-      <EditOptionDialog 
+      <EditOptionDialog
         open={editDialogOpen}
         onOpenChange={setEditDialogOpen}
         option={editingOption}
+        portfolioId={portfolioId}
+      />
+
+      <RolloverOptionDialog
+        open={rolloverDialogOpen}
+        onOpenChange={setRolloverDialogOpen}
+        option={rolloverOption}
         portfolioId={portfolioId}
       />
     </>
