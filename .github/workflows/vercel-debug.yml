@@ -45,12 +45,12 @@ jobs:
       run: |
         echo "🔧 验证TypeScript编译"
         echo "===================="
-        
+
         # 安装依赖
-        cd calmlyinvest && npm ci
-        
+        npm ci
+
         # 尝试编译每个API文件
-        for file in ../api/*.ts; do
+        for file in api/*.ts; do
           if [ -f "$file" ]; then
             echo -e "\n编译 $file..."
             npx tsc "$file" --noEmit --esModuleInterop --skipLibCheck || {
@@ -65,15 +65,15 @@ jobs:
       run: |
         echo "🏗️ 模拟Vercel构建"
         echo "================="
-        
+
         # 检查vercel.json
         if [ -f "vercel.json" ]; then
           echo "vercel.json内容:"
           cat vercel.json
         fi
-        
+
         # 测试构建
-        cd calmlyinvest && npm run build
+        npm run build
     
     - name: 创建诊断报告
       if: failure()
