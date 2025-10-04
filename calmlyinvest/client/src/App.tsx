@@ -4,6 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Dashboard from "@/pages/dashboard";
+import RolloverHistory from "@/pages/rollover-history";
 import { LoginPage } from "@/pages/login-supabase";
 import { AuthProvider } from "@/contexts/auth-context";
 import { ProtectedRoute } from "@/components/protected-route";
@@ -20,6 +21,11 @@ function Router() {
       <Route path="/dashboard">
         <ProtectedRoute>
           <Dashboard />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/rollover-history">
+        <ProtectedRoute>
+          <RolloverHistory />
         </ProtectedRoute>
       </Route>
     </Switch>

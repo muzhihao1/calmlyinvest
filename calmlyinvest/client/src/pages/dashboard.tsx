@@ -12,7 +12,7 @@ import { SettingsPanel } from "@/components/settings-panel";
 import { AddHoldingDialog } from "@/components/add-holding-dialog";
 import { CsvImportDialog } from "@/components/csv-import-dialog";
 import { PortfolioCharts } from "@/components/portfolio-charts";
-import { ChartLine, Settings, Clock, RotateCcw, Upload, Download, LogOut, LogIn, Edit2, Check, X } from "lucide-react";
+import { ChartLine, Settings, Clock, RotateCcw, Upload, Download, LogOut, LogIn, Edit2, Check, X, Repeat } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient-supabase";
@@ -551,7 +551,17 @@ export default function Dashboard() {
                 <RotateCcw className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">刷新数据</span>
               </Button>
-              
+
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-gray-400 hover:text-white h-9 w-9 sm:h-10 sm:w-10"
+                onClick={() => window.location.href = "/rollover-history"}
+                title="Rollover 历史"
+              >
+                <Repeat className="h-5 w-5" />
+              </Button>
+
               <Button variant="ghost" size="icon" className="text-gray-400 hover:text-white h-9 w-9 sm:h-10 sm:w-10">
                 <Settings className="h-5 w-5" />
               </Button>
