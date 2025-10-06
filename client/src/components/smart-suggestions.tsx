@@ -15,9 +15,10 @@ export interface Suggestion {
 interface SmartSuggestionsProps {
   suggestions: Suggestion[];
   isLoading: boolean;
+  summary?: string;
 }
 
-export function SmartSuggestions({ suggestions, isLoading }: SmartSuggestionsProps) {
+export function SmartSuggestions({ suggestions, isLoading, summary }: SmartSuggestionsProps) {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -100,6 +101,21 @@ export function SmartSuggestions({ suggestions, isLoading }: SmartSuggestionsPro
 
   return (
     <div className="space-y-6">
+      {/* AI Summary */}
+      {summary && (
+        <Card className="bg-gradient-to-r from-blue-900/30 to-purple-900/30 border-blue-500/30">
+          <CardHeader>
+            <CardTitle className="text-blue-400 flex items-center">
+              <Lightbulb className="mr-2 h-5 w-5" />
+              AI投资顾问总结
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-gray-300 text-base leading-relaxed">{summary}</p>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Immediate Actions */}
       {immediateActions.length > 0 && (
         <Card className="bg-slate-800 border-gray-700">

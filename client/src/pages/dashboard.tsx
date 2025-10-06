@@ -334,10 +334,15 @@ export default function Dashboard() {
     setTempCashValue("");
   };
 
-  const { data: suggestions = [], isLoading: suggestionsLoading } = useQuery<Suggestion[]>({
-    queryKey: [`/api/portfolio-suggestions-simple?portfolioId=${portfolioId}`],
-    enabled: !!portfolioId,
+  // Use AI-powered suggestions
+  const { data: aiSuggestionsData, isLoading: suggestionsLoading } = useQuery<{suggestions: Suggestion[], summary: string}>({
+    queryKey: [`/api/ai-suggestions-simple?portfolioId=${portfolioId}&userId=${userId}`],
+    enabled: !!portfolioId && !isGuest, // Only for authenticated users
+    refetchOnWindowFocus: false, // Don't refetch on focus to save API calls
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
+
+  const suggestions = aiSuggestionsData?.suggestions || [];
 
   const { data: riskSettings } = useQuery<RiskSettings>({
     queryKey: [`/api/user-risk-settings-simple?userId=${userId}`],
@@ -922,9 +927,10 @@ export default function Dashboard() {
           </TabsContent>
 
           <TabsContent value="suggestions">
-            <SmartSuggestions 
-              suggestions={suggestions || []} 
+            <SmartSuggestions
+              suggestions={suggestions || []}
               isLoading={suggestionsLoading}
+              summary={aiSuggestionsData?.summary}
             />
           </TabsContent>
 
