@@ -51,10 +51,11 @@ export function PortfolioCharts({ stockHoldings, optionHoldings, riskMetrics, po
     (sum, h) => sum + parseFloat(h.currentPrice || h.costPrice) * h.quantity,
     0
   );
-  const optionValue = optionHoldings.reduce(
-    (sum, h) => sum + parseFloat(h.currentPrice || h.costPrice) * h.contracts * 100,
-    0
-  );
+  // Option value considering direction: SELL options are liabilities (negative)
+  const optionValue = optionHoldings.reduce((sum, h) => {
+    const value = parseFloat(h.currentPrice || h.costPrice) * h.contracts * 100;
+    return sum + (h.direction === "SELL" ? -value : value);
+  }, 0);
   const cashValue = parseFloat(portfolio?.cashBalance || "0");
 
   const assetDistribution = [

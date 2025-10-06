@@ -187,8 +187,11 @@ export default function Dashboard() {
       })) : 0;
     
     // Simple leverage calculation: (Stock Value + Option Value) / Net Liquidation Value
-    const optionValue = options.reduce((sum, option) => 
-      sum + (option.contracts * parseFloat(option.currentPrice || "0") * 100), 0);
+    // Option value considering direction: SELL options are liabilities (negative)
+    const optionValue = options.reduce((sum, option) => {
+      const value = option.contracts * parseFloat(option.currentPrice || "0") * 100;
+      return sum + (option.direction === "SELL" ? -value : value);
+    }, 0);
     const totalMarketValue = totalStockValue + optionValue;
     const cashBalance = guestCashBalance; // Use editable cash balance
     const netLiquidationValue = totalStockValue + optionValue + cashBalance;
@@ -206,12 +209,15 @@ export default function Dashboard() {
   };
 
   const calculateGuestPortfolio = (stocks: StockHolding[], options: OptionHolding[]) => {
-    const stockValue = stocks.reduce((sum, stock) => 
+    const stockValue = stocks.reduce((sum, stock) =>
       sum + (stock.quantity * parseFloat(stock.currentPrice || "0")), 0);
-    
-    const optionValue = options.reduce((sum, option) => 
-      sum + (option.contracts * parseFloat(option.currentPrice || "0") * 100), 0);
-    
+
+    // Option value considering direction: SELL options are liabilities (negative)
+    const optionValue = options.reduce((sum, option) => {
+      const value = option.contracts * parseFloat(option.currentPrice || "0") * 100;
+      return sum + (option.direction === "SELL" ? -value : value);
+    }, 0);
+
     const cashBalance = guestCashBalance; // Use editable cash balance
     const marginUsed = 0; // No margin for demo
     const totalEquity = stockValue + optionValue + cashBalance - marginUsed;
@@ -253,10 +259,12 @@ export default function Dashboard() {
       options.reduce((sum, option) => 
         sum + (option.contracts * parseFloat(option.costPrice) * 100), 0);
     
-    const totalMarketValue = stocks.reduce((sum, stock) => 
+    const totalMarketValue = stocks.reduce((sum, stock) =>
       sum + (stock.quantity * parseFloat(stock.currentPrice || "0")), 0) +
-      options.reduce((sum, option) => 
-        sum + (option.contracts * parseFloat(option.currentPrice || "0") * 100), 0);
+      options.reduce((sum, option) => {
+        const value = option.contracts * parseFloat(option.currentPrice || "0") * 100;
+        return sum + (option.direction === "SELL" ? -value : value);
+      }, 0);
     
     const totalPnL = totalMarketValue - totalCost;
     const totalPnLPercent = totalCost > 0 ? (totalPnL / totalCost) * 100 : 0;
@@ -710,8 +718,11 @@ export default function Dashboard() {
                     // Calculate real-time net liquidation value
                     const stockValue = actualStockHoldings.reduce((sum, stock) =>
                       sum + (stock.quantity * parseFloat(stock.currentPrice || "0")), 0);
-                    const optionValue = actualOptionHoldings.reduce((sum, option) =>
-                      sum + (option.contracts * parseFloat(option.currentPrice || "0") * 100), 0);
+                    // Option value considering direction: SELL options are liabilities (negative)
+                    const optionValue = actualOptionHoldings.reduce((sum, option) => {
+                      const value = option.contracts * parseFloat(option.currentPrice || "0") * 100;
+                      return sum + (option.direction === "SELL" ? -value : value);
+                    }, 0);
                     const cashBalance = parseFloat(actualPortfolio.cashBalance || "0");
                     const netLiquidationValue = stockValue + optionValue + cashBalance;
                     return `$${netLiquidationValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -724,11 +735,14 @@ export default function Dashboard() {
                   {portfoliosLoading || stocksLoading || optionsLoading ? (
                     <span className="text-gray-500">加载中...</span>
                   ) : (() => {
-                    // Calculate total market value (stocks + options)
+                    // Calculate total market value (stocks + options, considering direction)
                     const stockValue = actualStockHoldings.reduce((sum, stock) =>
                       sum + (stock.quantity * parseFloat(stock.currentPrice || "0")), 0);
-                    const optionValue = actualOptionHoldings.reduce((sum, option) =>
-                      sum + (option.contracts * parseFloat(option.currentPrice || "0") * 100), 0);
+                    // Option value considering direction: SELL options are liabilities (negative)
+                    const optionValue = actualOptionHoldings.reduce((sum, option) => {
+                      const value = option.contracts * parseFloat(option.currentPrice || "0") * 100;
+                      return sum + (option.direction === "SELL" ? -value : value);
+                    }, 0);
                     const totalMarketValue = stockValue + optionValue;
                     return `$${totalMarketValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
                   })()}
