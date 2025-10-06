@@ -180,7 +180,12 @@ export function PortfolioCharts({ stockHoldings, optionHoldings, riskMetrics, po
                       </Pie>
                       <Tooltip
                         formatter={(value: number) => `$${value.toLocaleString()}`}
-                        contentStyle={{ backgroundColor: 'rgba(0, 0, 0, 0.8)', border: 'none', borderRadius: '8px' }}
+                        contentStyle={{
+                          backgroundColor: 'white',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          color: '#1f2937'
+                        }}
                       />
                     </PieChart>
                   </ResponsiveContainer>
@@ -223,7 +228,12 @@ export function PortfolioCharts({ stockHoldings, optionHoldings, riskMetrics, po
                           </Pie>
                           <Tooltip
                             formatter={(value: number) => `$${value.toLocaleString()}`}
-                            contentStyle={{ backgroundColor: 'rgba(0, 0, 0, 0.8)', border: 'none', borderRadius: '8px' }}
+                            contentStyle={{
+                              backgroundColor: 'white',
+                              border: '1px solid #e5e7eb',
+                              borderRadius: '8px',
+                              color: '#1f2937'
+                            }}
                           />
                         </PieChart>
                       </ResponsiveContainer>
