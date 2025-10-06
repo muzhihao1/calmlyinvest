@@ -704,21 +704,34 @@ export default function Dashboard() {
               <div className="bg-slate-800 rounded-xl p-3 sm:p-4 border border-gray-700">
                 <div className="text-xs sm:text-sm text-gray-400">净清算价值</div>
                 <div className="text-xl sm:text-2xl font-bold text-white">
-                  {portfoliosLoading || portfolioLoading || !actualPortfolio ? (
+                  {portfoliosLoading || portfolioLoading || stocksLoading || optionsLoading || !actualPortfolio ? (
                     <span className="text-gray-500">加载中...</span>
-                  ) : (
-                    `$${parseFloat(actualPortfolio.totalEquity || "0").toLocaleString()}`
-                  )}
+                  ) : (() => {
+                    // Calculate real-time net liquidation value
+                    const stockValue = actualStockHoldings.reduce((sum, stock) =>
+                      sum + (stock.quantity * parseFloat(stock.currentPrice || "0")), 0);
+                    const optionValue = actualOptionHoldings.reduce((sum, option) =>
+                      sum + (option.contracts * parseFloat(option.currentPrice || "0") * 100), 0);
+                    const cashBalance = parseFloat(actualPortfolio.cashBalance || "0");
+                    const netLiquidationValue = stockValue + optionValue + cashBalance;
+                    return `$${netLiquidationValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                  })()}
                 </div>
               </div>
               <div className="bg-slate-800 rounded-xl p-3 sm:p-4 border border-gray-700">
                 <div className="text-xs sm:text-sm text-gray-400">市场价值</div>
                 <div className="text-xl sm:text-2xl font-bold text-white">
-                  {portfoliosLoading || riskLoading || !actualRiskMetrics ? (
+                  {portfoliosLoading || stocksLoading || optionsLoading ? (
                     <span className="text-gray-500">加载中...</span>
-                  ) : (
-                    `$${parseFloat(actualRiskMetrics.stockValue || "0").toLocaleString()}`
-                  )}
+                  ) : (() => {
+                    // Calculate total market value (stocks + options)
+                    const stockValue = actualStockHoldings.reduce((sum, stock) =>
+                      sum + (stock.quantity * parseFloat(stock.currentPrice || "0")), 0);
+                    const optionValue = actualOptionHoldings.reduce((sum, option) =>
+                      sum + (option.contracts * parseFloat(option.currentPrice || "0") * 100), 0);
+                    const totalMarketValue = stockValue + optionValue;
+                    return `$${totalMarketValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                  })()}
                 </div>
               </div>
               <div className="bg-slate-800 rounded-xl p-3 sm:p-4 border border-gray-700">
