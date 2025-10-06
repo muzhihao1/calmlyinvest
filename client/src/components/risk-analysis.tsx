@@ -43,8 +43,15 @@ export function RiskAnalysis({ stockHoldings, optionHoldings, riskMetrics }: Ris
       // Calculate stock value drop considering beta
       const stockValueDrop = stockValue * scenario.marketDrop * portfolioBeta;
 
-      // Portfolio loss = stock value drop (this comes directly from total equity)
-      const portfolioLoss = stockValueDrop;
+      // Estimate option losses during market stress
+      // For SELL options (liabilities), market drop increases losses significantly
+      // Conservative estimate: option losses are 2-3x leveraged relative to market drop
+      // This accounts for delta changes and volatility increases
+      const optionStressMultiplier = 2.5; // Conservative estimate for sold options
+      const estimatedOptionLoss = optionMaxLoss * scenario.marketDrop * optionStressMultiplier;
+
+      // Total portfolio loss = stock drop + option stress losses
+      const portfolioLoss = stockValueDrop + estimatedOptionLoss;
 
       // New total equity after loss
       const newTotalEquity = Math.max(totalEquity - portfolioLoss, 0);

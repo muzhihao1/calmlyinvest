@@ -58,10 +58,16 @@ export function PortfolioCharts({ stockHoldings, optionHoldings, riskMetrics, po
   }, 0);
   const cashValue = parseFloat(portfolio?.cashBalance || "0");
 
+  // For asset distribution, use absolute values to calculate percentages
+  // Negative option values (liabilities) should be shown separately or excluded from pie chart
+  const totalAssets = stockValue + Math.max(0, optionValue) + cashValue;
   const assetDistribution = [
-    { name: "股票", value: stockValue, percentage: ((stockValue / (stockValue + optionValue + cashValue)) * 100).toFixed(1) },
-    { name: "期权", value: optionValue, percentage: ((optionValue / (stockValue + optionValue + cashValue)) * 100).toFixed(1) },
-    { name: "现金", value: cashValue, percentage: ((cashValue / (stockValue + optionValue + cashValue)) * 100).toFixed(1) },
+    { name: "股票", value: stockValue, percentage: totalAssets > 0 ? ((stockValue / totalAssets) * 100).toFixed(1) : "0.0" },
+    // Only show options in pie chart if positive (BUY options)
+    ...(optionValue > 0 ? [{ name: "期权", value: optionValue, percentage: ((optionValue / totalAssets) * 100).toFixed(1) }] : []),
+    { name: "现金", value: cashValue, percentage: totalAssets > 0 ? ((cashValue / totalAssets) * 100).toFixed(1) : "0.0" },
+    // Show liabilities separately if options are negative
+    ...(optionValue < 0 ? [{ name: "期权负债", value: Math.abs(optionValue), percentage: totalAssets > 0 ? ((Math.abs(optionValue) / totalAssets) * 100).toFixed(1) : "0.0" }] : []),
   ];
 
   // Risk level data for radar chart
