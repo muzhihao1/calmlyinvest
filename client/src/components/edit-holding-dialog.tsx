@@ -62,9 +62,9 @@ export function EditHoldingDialog({ open, onOpenChange, holding, portfolioId }: 
         symbol: holding.symbol,
         name: holding.name || "",
         quantity: holding.quantity,
-        costPrice: holding.costPrice || "0",
-        currentPrice: holding.currentPrice || "0",
-        beta: holding.beta || "1.0",
+        costPrice: String(holding.costPrice || "0"),
+        currentPrice: String(holding.currentPrice || "0"),
+        beta: String(holding.beta || "1.0"),
       });
     }
   }, [holding, form]);
