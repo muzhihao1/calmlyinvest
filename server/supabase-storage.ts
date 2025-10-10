@@ -172,12 +172,28 @@ export class SupabaseStorage {
   }
 
   async deleteStockHolding(id: string): Promise<boolean> {
-    const { error } = await this.supabase
+    console.log(`[SupabaseStorage] Deleting stock holding with ID: ${id}`);
+    console.log(`[SupabaseStorage] ID type: ${typeof id}`);
+
+    const { data, error, count } = await this.supabase
       .from('stock_holdings')
       .delete()
-      .eq('id', id);
+      .eq('id', id)
+      .select();
 
-    if (error) throw error;
+    console.log(`[SupabaseStorage] Delete result - data:`, data);
+    console.log(`[SupabaseStorage] Delete result - error:`, error);
+    console.log(`[SupabaseStorage] Delete result - count:`, count);
+
+    if (error) {
+      console.error(`[SupabaseStorage] Delete error details:`, JSON.stringify(error, null, 2));
+      throw error;
+    }
+
+    if (!data || data.length === 0) {
+      console.warn(`[SupabaseStorage] No rows deleted for ID: ${id}`);
+    }
+
     return true;
   }
 
