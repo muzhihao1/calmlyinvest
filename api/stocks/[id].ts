@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { setCorsHeaders, sendSuccess, sendError } from '../utils/response';
-import { requireAuth } from '../utils/auth';
-import { getStorage } from '../utils/storage';
+import { setCorsHeaders, sendSuccess, sendError } from '../utils/response.js';
+import { requireAuth } from '../utils/auth.js';
+import { getStorage } from '../utils/storage.js';
 
 /**
  * Update or delete a stock holding
