@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { setCorsHeaders, sendSuccess, sendError, handleValidationError } from '../utils/response';
-import { requireAuth } from '../utils/auth';
-import { getStorage } from '../utils/storage';
+import { setCorsHeaders, sendSuccess, sendError, handleValidationError } from '../utils/response.js';
+import { requireAuth } from '../utils/auth.js';
+import { getStorage } from '../utils/storage.js';
 import { insertPortfolioSchema } from '../../shared/schema-supabase';
 import { z } from 'zod';
 
