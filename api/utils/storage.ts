@@ -1,7 +1,7 @@
 import type { VercelRequest } from '@vercel/node';
-import { initializeStorage } from './storage-init';
+import { initializeStorage } from './storage-init.js';
 import { StorageInterface } from '../../shared/storage-interface';
-import { User } from './auth';
+import { User } from './auth.js';
 
 /**
  * Get storage adapter based on user authentication

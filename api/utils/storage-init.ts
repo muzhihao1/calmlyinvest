@@ -1,6 +1,6 @@
-import { SupabaseStorage } from '../../server/supabase-storage';
-import { StorageInterface } from '../../shared/storage-interface';
-import { guestStorage } from '../../server/storage-guest';
+import { SupabaseStorage } from '../../server/supabase-storage.js';
+import { StorageInterface } from '../../shared/storage-interface.js';
+import { guestStorage } from '../../server/storage-guest.js';
 
 // Helper to convert dates to strings in objects
 function convertDatesToStrings(obj: any): any {
