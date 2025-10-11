@@ -22,6 +22,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const portfolioId = (req.query.portfolioId || req.body?.portfolioId) as string;
 
+  // Parse includeAll query parameter
+  // Default: false (only ACTIVE) for backward compatibility
+  // Set to 'true' or '1' to include all statuses (ACTIVE, ROLLED, CLOSED, etc.)
+  const includeAllParam = req.query.includeAll as string | undefined;
+  const includeAll = includeAllParam === 'true' || includeAllParam === '1';
+
   if (!portfolioId) {
     return res.status(400).json({ error: 'Portfolio ID is required' });
   }
@@ -78,13 +84,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(403).json({ error: 'Access denied' });
       }
 
-      // Fetch options from database (only ACTIVE ones)
-      console.log('[portfolio-options-simple] Fetching options for portfolio:', portfolioId);
-      const { data: options, error: fetchError } = await supabaseAdmin
+      // Fetch options from database
+      // By default (includeAll=false), only return ACTIVE options for backward compatibility
+      // Set includeAll=true to get all statuses (ACTIVE, ROLLED, CLOSED, etc.)
+      console.log('[portfolio-options-simple] Fetching options:', { portfolioId, includeAll });
+
+      let query = supabaseAdmin
         .from('option_holdings')
         .select('*')
-        .eq('portfolio_id', portfolioId)
-        .eq('status', 'ACTIVE');
+        .eq('portfolio_id', portfolioId);
+
+      // Only filter by status='ACTIVE' if includeAll is false (default behavior)
+      if (!includeAll) {
+        query = query.eq('status', 'ACTIVE');
+      }
+
+      const { data: options, error: fetchError } = await query;
 
       if (fetchError) {
         console.error('[portfolio-options-simple] Error fetching options:', fetchError);
