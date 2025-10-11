@@ -145,8 +145,12 @@ export function RolloverOptionDialog({
       return response;
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: [`/api/portfolio/${portfolioId}/options`] });
-      queryClient.invalidateQueries({ queryKey: [`/api/portfolio/${portfolioId}/risk`] });
+      // Invalidate all portfolio-related queries to ensure UI updates immediately
+      // Must include portfolioId parameter to match the actual query keys
+      queryClient.invalidateQueries({ queryKey: [`/api/portfolio-options-simple?portfolioId=${portfolioId}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/portfolio-details-simple?portfolioId=${portfolioId}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/portfolio-risk-simple?portfolioId=${portfolioId}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/portfolio-stocks-simple?portfolioId=${portfolioId}`] });
       queryClient.invalidateQueries({ queryKey: ['rollovers', portfolioId] });
 
       // Safely access realizedPnl

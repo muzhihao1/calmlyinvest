@@ -122,8 +122,12 @@ export function EditOptionDialog({ open, onOpenChange, option, portfolioId }: Ed
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/portfolio/${portfolioId}/options`] });
-      queryClient.invalidateQueries({ queryKey: [`/api/portfolio/${portfolioId}/risk`] });
+      // Invalidate all portfolio-related queries to ensure UI updates immediately
+      // Must include portfolioId parameter to match the actual query keys
+      queryClient.invalidateQueries({ queryKey: [`/api/portfolio-options-simple?portfolioId=${portfolioId}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/portfolio-details-simple?portfolioId=${portfolioId}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/portfolio-risk-simple?portfolioId=${portfolioId}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/portfolio-stocks-simple?portfolioId=${portfolioId}`] });
       toast({
         title: "更新成功",
         description: "期权持仓已更新",
