@@ -1,6 +1,6 @@
 import { Request } from 'express';
-import { storage } from './storage-init';
-import { guestStorage } from './storage-guest';
+import { storage } from './storage-init.js';
+import { guestStorage } from './storage-guest.js';
 import type { 
   Portfolio, 
   StockHolding, 

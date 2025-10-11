@@ -1,5 +1,5 @@
-import { SupabaseStorage } from './supabase-storage';
-import { supabaseConfig } from './config/supabase';
+import { SupabaseStorage } from './supabase-storage.js';
+import { supabaseConfig } from './config/supabase.js';
 
 // Create storage instance using Supabase
 function createStorage(): SupabaseStorage | null {

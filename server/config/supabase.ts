@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { fetchWithTimeout } from '../utils/supabase-retry';
+import { fetchWithTimeout } from '../utils/supabase-retry.js';
 
 // Supabase configuration with better error handling
 export const supabaseConfig = {

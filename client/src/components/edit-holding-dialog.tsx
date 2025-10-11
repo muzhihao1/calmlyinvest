@@ -79,6 +79,11 @@ export function EditHoldingDialog({ open, onOpenChange, holding, portfolioId }: 
       return response.json();
     },
     onSuccess: () => {
+      // Invalidate all portfolio-related queries to ensure UI updates immediately
+      // Must include portfolioId parameter to match the actual query keys
+      queryClient.invalidateQueries({ queryKey: [`/api/portfolio-stocks-simple?portfolioId=${portfolioId}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/portfolio-details-simple?portfolioId=${portfolioId}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/portfolio-risk-simple?portfolioId=${portfolioId}`] });
       queryClient.invalidateQueries({ queryKey: [`/api/portfolio/${portfolioId}/stocks`] });
       queryClient.invalidateQueries({ queryKey: [`/api/portfolio/${portfolioId}/risk`] });
       toast({

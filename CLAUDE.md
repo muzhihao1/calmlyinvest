@@ -294,67 +294,12 @@ code,name,quantity,cost,current_price
 
 ## MCP (Model Context Protocol) Integration
 
-The repository includes MCP server configuration:
-- `cursor-mcp-config.json` - Cursor IDE MCP configuration
-- `graphiti_mcp_server.py` - Graphiti MCP server implementation
-- MCP servers provide enhanced IDE capabilities and knowledge graph integration
+The repository includes MCP server configuration in `.cursor/mcp.json`:
+- **Supabase MCP**: Database operations and queries
+- **Notion MCP**: Documentation and note-taking integration
+- **Context7 MCP**: Enhanced code context and documentation
+- **Sequential Thinking MCP**: Problem-solving workflows
+- **Playwright MCP**: Browser automation and testing
+- **Ultra MCP**: Advanced AI capabilities and code analysis
 
-## Serena MCP Integration
-
-When working with this codebase through the Serena MCP (Model Context Protocol) server, follow these guidelines:
-
-### Code Reading Strategy
-
-**IMPORTANT**: Always read code intelligently and frugally:
-- Use symbolic tools to understand code structure before reading entire files
-- Rely on `get_symbols_overview` to see top-level symbols in files/directories
-- Use `find_symbol` with `include_body=False` first to understand structure
-- Only read symbol bodies when necessary for the task
-- Avoid reading entire files unless absolutely necessary
-
-### Available Tools
-
-1. **Symbolic Reading Tools**:
-   - `get_symbols_overview` - Get top-level symbols in files/directories
-   - `find_symbol` - Find specific symbols by name path
-   - `find_referencing_symbols` - Find symbols that reference a given symbol
-   
-2. **Search Tools**:
-   - `search_for_pattern` - Fast regex search across codebase
-   - `find_file` - Find files by name pattern
-   - `list_dir` - List directory contents
-
-3. **Editing Tools**:
-   - **Symbol-based**: `replace_symbol_body`, `insert_before_symbol`, `insert_after_symbol`
-   - **Regex-based**: `replace_regex` for precise line-level changes
-
-### Editing Strategies
-
-**Symbol-based editing** (for whole methods, classes, functions):
-- Use when replacing entire symbols
-- Tools handle indentation automatically
-- Find symbol first, then replace its body
-
-**Regex-based editing** (for small changes within symbols):
-- Use for changing a few lines within a method
-- Must handle indentation manually
-- Use wildcards intelligently for multi-line replacements
-- Examples:
-  - Small change: `x = relu\(x\)` → `x = gelu(x)`
-  - Large change: `beginning.*?end` with wildcards for middle content
-
-### Best Practices
-
-1. **Before any task**: Check memories for relevant project information
-2. **Symbol identification**: Use `name_path` (e.g., `ClassName/method_name`)
-3. **Minimize reads**: Read only what's necessary for the task
-4. **Verify relationships**: Use `find_referencing_symbols` before breaking changes
-5. **Interactive mode**: Ask for clarification when uncertain
-6. **Use wildcards**: In regex replacements to minimize output tokens
-
-### Memory Management
-
-- Read relevant memories before starting tasks
-- Store important discoveries as memories
-- Memory files contain general project information
-- Use memory names to infer relevance
+MCP servers provide enhanced IDE capabilities, database integration, and knowledge graph functionality.
