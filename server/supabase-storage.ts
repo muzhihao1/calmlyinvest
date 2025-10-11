@@ -175,6 +175,15 @@ export class SupabaseStorage {
     console.log(`[SupabaseStorage] Deleting stock holding with ID: ${id}`);
     console.log(`[SupabaseStorage] ID type: ${typeof id}`);
 
+    // First, get the portfolio_id before deletion so we can check if we need to reset margin
+    const { data: holdingData } = await this.supabase
+      .from('stock_holdings')
+      .select('portfolio_id')
+      .eq('id', id)
+      .single();
+
+    const portfolioId = holdingData?.portfolio_id;
+
     const { data, error, count } = await this.supabase
       .from('stock_holdings')
       .delete()
@@ -192,6 +201,12 @@ export class SupabaseStorage {
 
     if (!data || data.length === 0) {
       console.warn(`[SupabaseStorage] No rows deleted for ID: ${id}`);
+    }
+
+    // After successful deletion, check if portfolio has any remaining holdings
+    // If not, reset margin_used to 0
+    if (portfolioId && data && data.length > 0) {
+      await this.resetPortfolioMarginIfEmpty(portfolioId);
     }
 
     return true;
@@ -256,7 +271,16 @@ export class SupabaseStorage {
   async deleteOptionHolding(id: string): Promise<boolean> {
     console.log('[deleteOptionHolding] Attempting to delete option holding:', id);
 
-    // First, delete any rollover records referencing this option
+    // First, get the portfolio_id before deletion so we can check if we need to reset margin
+    const { data: holdingData } = await this.supabase
+      .from('option_holdings')
+      .select('portfolio_id')
+      .eq('id', id)
+      .single();
+
+    const portfolioId = holdingData?.portfolio_id;
+
+    // Delete any rollover records referencing this option
     // This is necessary because of foreign key constraints:
     // - option_rollovers.old_option_id references option_holdings.id
     // - option_rollovers.new_option_id references option_holdings.id
@@ -294,7 +318,52 @@ export class SupabaseStorage {
       console.warn('[deleteOptionHolding] No rows deleted - option holding may have already been deleted:', id);
     }
 
+    // After successful deletion, check if portfolio has any remaining holdings
+    // If not, reset margin_used to 0
+    if (portfolioId && data && data.length > 0) {
+      await this.resetPortfolioMarginIfEmpty(portfolioId);
+    }
+
     return true;
+  }
+
+  // Helper method to reset portfolio margin_used to 0 if no holdings remain
+  private async resetPortfolioMarginIfEmpty(portfolioId: string): Promise<void> {
+    console.log('[resetPortfolioMarginIfEmpty] Checking if portfolio has remaining holdings:', portfolioId);
+
+    // Check for remaining stock holdings
+    const { data: stocks, error: stockError } = await this.supabase
+      .from('stock_holdings')
+      .select('id')
+      .eq('portfolio_id', portfolioId)
+      .limit(1);
+
+    // Check for remaining option holdings
+    const { data: options, error: optionError } = await this.supabase
+      .from('option_holdings')
+      .select('id')
+      .eq('portfolio_id', portfolioId)
+      .limit(1);
+
+    const hasStocks = !stockError && stocks && stocks.length > 0;
+    const hasOptions = !optionError && options && options.length > 0;
+
+    console.log('[resetPortfolioMarginIfEmpty] Remaining holdings check:', { hasStocks, hasOptions });
+
+    // If no holdings remain, reset margin_used to 0
+    if (!hasStocks && !hasOptions) {
+      console.log('[resetPortfolioMarginIfEmpty] No holdings remain, resetting margin_used to 0');
+      const { error: updateError } = await this.supabase
+        .from('portfolios')
+        .update({ margin_used: '0.00' })
+        .eq('id', portfolioId);
+
+      if (updateError) {
+        console.error('[resetPortfolioMarginIfEmpty] Error resetting margin:', updateError);
+      } else {
+        console.log('[resetPortfolioMarginIfEmpty] Margin successfully reset to 0');
+      }
+    }
   }
 
   // Risk metrics operations
