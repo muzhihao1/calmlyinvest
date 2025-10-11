@@ -73,6 +73,10 @@ export function HoldingsTable({ holdings, portfolioId, isGuest = false }: Holdin
     },
     onSuccess: () => {
       if (!isGuest) {
+        // Invalidate all portfolio-related queries to ensure UI updates immediately
+        queryClient.invalidateQueries({ queryKey: [`/api/portfolio-stocks-simple`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/portfolio-details-simple`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/portfolio-risk-simple`] });
         queryClient.invalidateQueries({ queryKey: [`/api/portfolio/${portfolioId}/stocks`] });
         queryClient.invalidateQueries({ queryKey: [`/api/portfolio/${portfolioId}/risk`] });
       }
