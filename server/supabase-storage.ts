@@ -1,5 +1,5 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import * as schema from '../shared/schema-supabase';
+import * as schema from '../shared/schema-supabase.js';
 
 export class SupabaseStorage {
   private supabase: SupabaseClient;
