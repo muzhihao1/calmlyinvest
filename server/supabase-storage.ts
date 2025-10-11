@@ -256,6 +256,25 @@ export class SupabaseStorage {
   async deleteOptionHolding(id: string): Promise<boolean> {
     console.log('[deleteOptionHolding] Attempting to delete option holding:', id);
 
+    // First, delete any rollover records referencing this option
+    // This is necessary because of foreign key constraints:
+    // - option_rollovers.old_option_id references option_holdings.id
+    // - option_rollovers.new_option_id references option_holdings.id
+    console.log('[deleteOptionHolding] Deleting related rollover records...');
+    const { error: rolloverDeleteError } = await this.supabase
+      .from('option_rollovers')
+      .delete()
+      .or(`old_option_id.eq.${id},new_option_id.eq.${id}`);
+
+    if (rolloverDeleteError) {
+      console.error('[deleteOptionHolding] Error deleting related rollover records:', rolloverDeleteError);
+      // Don't throw - try to continue with the main deletion
+      // The constraint error will surface if rollovers couldn't be deleted
+    } else {
+      console.log('[deleteOptionHolding] Related rollover records deleted successfully');
+    }
+
+    // Now delete the option holding itself
     const { data, error, count } = await this.supabase
       .from('option_holdings')
       .delete()
