@@ -101,7 +101,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Fetch option holdings (only ACTIVE ones)
       const { data: options } = await supabaseAdmin
         .from('option_holdings')
-        .select('contracts, current_price')
+        .select('contracts, current_price, direction')
         .eq('portfolio_id', portfolioId)
         .eq('status', 'ACTIVE');
 
