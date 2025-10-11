@@ -1,9 +1,9 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { setCorsHeaders, sendSuccess, sendError, handleValidationError } from '../../../utils/response';
-import { requireAuth } from '../../../utils/auth';
-import { getStorage } from '../../../utils/storage';
-import { verifyPortfolioAccess } from '../../../utils/portfolio-auth';
-import { insertStockHoldingSchema } from '../../../../shared/schema-supabase';
+import { setCorsHeaders, sendSuccess, sendError, handleValidationError } from '../../../utils/response.js';
+import { requireAuth } from '../../../utils/auth.js';
+import { getStorage } from '../../../utils/storage.js';
+import { verifyPortfolioAccess } from '../../../utils/portfolio-auth.js';
+import { insertStockHoldingSchema } from '../../../../shared/schema-supabase.js';
 import { z } from 'zod';
 
 /**

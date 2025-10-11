@@ -1,8 +1,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { setCorsHeaders, sendSuccess, sendError } from './utils/response';
-import { requireAuth } from './utils/auth';
-import { getStorage } from './utils/storage';
-import { verifyPortfolioAccess } from './utils/portfolio-auth';
+import { setCorsHeaders, sendSuccess, sendError } from './utils/response.js';
+import { requireAuth } from './utils/auth.js';
+import { getStorage } from './utils/storage.js';
+import { verifyPortfolioAccess } from './utils/portfolio-auth.js';
 
 /**
  * Get risk metrics for a portfolio

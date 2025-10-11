@@ -1,5 +1,5 @@
 import { SupabaseStorage } from '../../server/supabase-storage.js';
-import { StorageInterface } from '../../shared/storage-interface.js';
+import { StorageInterface } from '../../shared/storage-interface.js.js';
 import { guestStorage } from '../../server/storage-guest.js';
 
 // Helper to convert dates to strings in objects

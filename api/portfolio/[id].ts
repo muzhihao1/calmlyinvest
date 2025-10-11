@@ -1,8 +1,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { setCorsHeaders, sendSuccess, sendError } from '../utils/response.js';
-import { requireAuth } from '../utils/auth.js';
-import { getStorage } from '../utils/storage.js';
-import { verifyPortfolioAccess } from '../utils/portfolio-auth.js';
+import { setCorsHeaders, sendSuccess, sendError } from '../utils/response.js.js';
+import { requireAuth } from '../utils/auth.js.js';
+import { getStorage } from '../utils/storage.js.js';
+import { verifyPortfolioAccess } from '../utils/portfolio-auth.js.js';
 
 /**
  * Get, update, or delete a portfolio

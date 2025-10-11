@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { setCorsHeaders, sendSuccess, sendError } from './utils/response';
+import { setCorsHeaders, sendSuccess, sendError } from './utils/response.js';
 
 /**
  * Health check endpoint
