@@ -58,17 +58,40 @@ export function OptionsTable({ holdings, portfolioId }: OptionsTableProps) {
         await apiRequest("DELETE", `/api/options/${id}`);
       }
     },
+    // Optimistic update: immediately remove from UI before server responds
+    onMutate: async (deletedId) => {
+      if (isGuest) return;
+
+      // Cancel any outgoing refetches to avoid overwriting optimistic update
+      await queryClient.cancelQueries({ queryKey: [`/api/portfolio-options-simple?portfolioId=${portfolioId}`] });
+
+      // Snapshot the previous value for rollback on error
+      const previousOptions = queryClient.getQueryData([`/api/portfolio-options-simple?portfolioId=${portfolioId}`]);
+
+      // Optimistically update by removing the deleted option
+      queryClient.setQueryData(
+        [`/api/portfolio-options-simple?portfolioId=${portfolioId}`],
+        (old: any) => {
+          if (!old?.options) return old;
+          return {
+            ...old,
+            options: old.options.filter((option: OptionHolding) => option.id !== deletedId)
+          };
+        }
+      );
+
+      return { previousOptions };
+    },
     onSuccess: () => {
       if (isGuest) {
         // Guest mode: trigger page refresh
         window.dispatchEvent(new CustomEvent('guestOptionsUpdated'));
       } else {
-        // Authenticated mode: invalidate all portfolio-related queries to ensure UI updates immediately
-        // Must include portfolioId parameter to match the actual query keys
+        // Invalidate queries to refetch fresh data from server (but UI already updated via optimistic update)
+        // Only invalidate essential queries to minimize refetch overhead
         queryClient.invalidateQueries({ queryKey: [`/api/portfolio-options-simple?portfolioId=${portfolioId}`] });
         queryClient.invalidateQueries({ queryKey: [`/api/portfolio-details-simple?portfolioId=${portfolioId}`] });
         queryClient.invalidateQueries({ queryKey: [`/api/portfolio-risk-simple?portfolioId=${portfolioId}`] });
-        queryClient.invalidateQueries({ queryKey: [`/api/portfolio-stocks-simple?portfolioId=${portfolioId}`] });
       }
 
       toast({
@@ -76,7 +99,15 @@ export function OptionsTable({ holdings, portfolioId }: OptionsTableProps) {
         description: "期权持仓已删除",
       });
     },
-    onError: () => {
+    onError: (_error, _deletedId, context) => {
+      // Rollback optimistic update on error
+      if (context?.previousOptions && !isGuest) {
+        queryClient.setQueryData(
+          [`/api/portfolio-options-simple?portfolioId=${portfolioId}`],
+          context.previousOptions
+        );
+      }
+
       toast({
         title: "删除失败",
         description: "无法删除期权持仓，请稍后重试",

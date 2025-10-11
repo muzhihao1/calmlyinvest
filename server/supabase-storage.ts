@@ -254,12 +254,27 @@ export class SupabaseStorage {
   }
 
   async deleteOptionHolding(id: string): Promise<boolean> {
-    const { error } = await this.supabase
+    console.log('[deleteOptionHolding] Attempting to delete option holding:', id);
+
+    const { data, error, count } = await this.supabase
       .from('option_holdings')
       .delete()
-      .eq('id', id);
+      .eq('id', id)
+      .select();
 
-    if (error) throw error;
+    console.log('[deleteOptionHolding] Delete result:', { data, error, count, deletedRows: data?.length });
+
+    if (error) {
+      console.error('[deleteOptionHolding] Delete error:', error);
+      throw error;
+    }
+
+    // If no rows were deleted, the option holding didn't exist
+    // Return true anyway since the end result is the same (option is not in DB)
+    if (!data || data.length === 0) {
+      console.warn('[deleteOptionHolding] No rows deleted - option holding may have already been deleted:', id);
+    }
+
     return true;
   }
 
