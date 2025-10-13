@@ -90,11 +90,12 @@ export function EditOptionDialog({ open, onOpenChange, option, portfolioId }: Ed
         optionType: option.optionType as "CALL" | "PUT",
         direction: option.direction as "BUY" | "SELL",
         contracts: option.contracts,
-        strikePrice: option.strikePrice,
+        // Convert number types to strings for form validation
+        strikePrice: String(option.strikePrice),
         expirationDate: new Date(option.expirationDate),
-        costPrice: option.costPrice,
-        currentPrice: option.currentPrice || "",
-        deltaValue: option.deltaValue || "0",
+        costPrice: String(option.costPrice),
+        currentPrice: option.currentPrice ? String(option.currentPrice) : "",
+        deltaValue: option.deltaValue ? String(option.deltaValue) : "0",
       });
     }
   }, [option, form]);
