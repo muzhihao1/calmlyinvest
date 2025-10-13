@@ -181,13 +181,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         hasHighRiskOptions = true;
 
         if (optionType === 'PUT') {
-          // Sell Put: 最大亏损 = 行权价 * 合约数 * 100
-          const maxLoss = strikePrice * contracts * 100;
-          optionMaxLoss += maxLoss;
+          // Sell Put: 最大亏损 = (行权价 - 权利金) * 合约数 * 100
+          const maxLoss = (strikePrice - costPrice) * contracts * 100;
+          optionMaxLoss += Math.max(maxLoss, 0);
           highRiskStrategies.push(`Sell ${option.underlying_symbol} Put`);
         } else if (optionType === 'CALL') {
-          // Sell Naked Call: 理论无限亏损，用2倍行权价估算
-          const maxLoss = strikePrice * contracts * 100 * 2;
+          // Sell Naked Call: 理论无限亏损，用3倍行权价估算
+          const maxLoss = strikePrice * contracts * 100 * 3;
           optionMaxLoss += maxLoss;
           highRiskStrategies.push(`Sell ${option.underlying_symbol} Naked Call`);
         }
@@ -218,11 +218,45 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // 最大单一持仓集中度
     const maxConcentration = totalStockValue > 0 ? (maxStockValue / totalStockValue) * 100 : 0;
 
-    // 保证金使用率
+    // Calculate maintenance margin requirements
+    // 计算维持保证金要求（Maintenance Margin Requirement）
+    let maintenanceMargin = 0;
+
+    // Stock maintenance: 25% of market value (US Reg T requirement)
+    maintenanceMargin += totalStockValue * 0.25;
+
+    // Option maintenance: varies by strategy
+    (options || []).forEach((option: any) => {
+      const contracts = parseFloat(option.contracts || '0');
+      const strikePrice = parseFloat(option.strike_price || '0');
+      const currentPrice = parseFloat(option.current_price || '0');
+      const underlyingPrice = parseFloat(option.current_price || strikePrice); // Approximate
+      const optionType = option.option_type;
+      const direction = option.direction;
+
+      if (direction === 'SELL') {
+        if (optionType === 'PUT') {
+          // Short put maintenance: max(20% * strike, (strike - OTM) * 100) per contract
+          const requirement1 = strikePrice * 0.20 * contracts * 100;
+          const otmAmount = Math.max(0, strikePrice - underlyingPrice);
+          const requirement2 = (strikePrice - otmAmount) * contracts * 100;
+          maintenanceMargin += Math.max(requirement1, requirement2);
+        } else if (optionType === 'CALL') {
+          // Short call maintenance: max(20% * underlying, (underlying + ITM) * 100) per contract
+          const requirement1 = underlyingPrice * 0.20 * contracts * 100;
+          const itmAmount = Math.max(0, underlyingPrice - strikePrice);
+          const requirement2 = (underlyingPrice + itmAmount) * contracts * 100;
+          maintenanceMargin += Math.max(requirement1, requirement2);
+        }
+      }
+      // Long options: no maintenance requirement (fully paid)
+    });
+
+    // 保证金使用率: 使用实际已用保证金
     const marginUsageRatio = totalEquity > 0 ? (marginUsed / totalEquity) * 100 : 0;
 
-    // 剩余保证金（Excess Liquidity）
-    const excessLiquidity = totalEquity - marginUsed;
+    // 剩余保证金（Excess Liquidity）= 净清算价值 - 维持保证金要求
+    const excessLiquidity = totalEquity - maintenanceMargin;
     const excessLiquidityRatio = totalEquity > 0 ? (excessLiquidity / totalEquity) * 100 : 0;
 
     // 现金比率
@@ -310,6 +344,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       totalEquity: totalEquity.toFixed(2),
       cashBalance: cashBalance.toFixed(2),
       marginUsed: marginUsed.toFixed(2),
+      maintenanceMargin: maintenanceMargin.toFixed(2),
 
       // Risk assessment
       riskLevel: riskLevelFrontend, // GREEN/YELLOW/RED for frontend

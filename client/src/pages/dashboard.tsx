@@ -804,10 +804,10 @@ export default function Dashboard() {
               <div className="bg-slate-800 rounded-xl p-3 sm:p-4 border border-gray-700">
                 <div className="text-xs sm:text-sm text-gray-400">维持保证金</div>
                 <div className="text-xl sm:text-2xl font-bold text-yellow-500">
-                  {portfoliosLoading || portfolioLoading || !actualPortfolio ? (
+                  {portfoliosLoading || riskLoading || !actualRiskMetrics ? (
                     <span className="text-gray-500">加载中...</span>
                   ) : (
-                    `$${parseFloat(actualPortfolio.marginUsed || "0").toLocaleString()}`
+                    `$${parseFloat(actualRiskMetrics.maintenanceMargin || "0").toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                   )}
                 </div>
               </div>
