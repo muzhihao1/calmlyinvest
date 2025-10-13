@@ -114,7 +114,8 @@ export function EditOptionDialog({ open, onOpenChange, option, portfolioId }: Ed
         ...data,
         optionSymbol,
         expirationDate: format(data.expirationDate, "yyyy-MM-dd"),
-        contracts: data.direction === "SELL" ? -Math.abs(data.contracts) : Math.abs(data.contracts),
+        // Keep contracts as positive number, direction field indicates BUY/SELL
+        contracts: Math.abs(data.contracts),
         portfolioId,
         currentPrice: data.currentPrice || data.costPrice
       };

@@ -180,22 +180,36 @@ export default function Dashboard() {
         return sum + (beta * value);
       }, 0) / totalStockValue : 0;
     
-    const maxConcentration = stocks.length > 0 ? 
+    const maxConcentration = stocks.length > 0 ?
       Math.max(...stocks.map(stock => {
         const value = stock.quantity * parseFloat(stock.currentPrice || "0");
         return totalStockValue > 0 ? (value / totalStockValue) * 100 : 0;
       })) : 0;
-    
-    // Simple leverage calculation: (Stock Value + Option Value) / Net Liquidation Value
-    // Option value considering direction: SELL options are liabilities (negative)
-    const optionValue = options.reduce((sum, option) => {
-      const value = option.contracts * parseFloat(option.currentPrice || "0") * 100;
-      return sum + (option.direction === "SELL" ? -value : value);
+
+    // Correct leverage calculation: (Stock Value + Option Max Loss) / Total Equity
+    // For sold options, calculate maximum potential loss
+    const optionMaxLoss = options.reduce((sum, option) => {
+      const contracts = Math.abs(option.contracts);
+      if (option.direction === "BUY") {
+        // Buy options: max loss is premium paid
+        return sum + (contracts * parseFloat(option.costPrice) * 100);
+      } else {
+        // Sell options: calculate max loss based on type
+        if (option.optionType === "PUT") {
+          // Sell put: max loss = (strike - premium) * contracts * 100
+          const maxLoss = (parseFloat(option.strikePrice) - parseFloat(option.costPrice)) * contracts * 100;
+          return sum + Math.max(maxLoss, 0);
+        } else {
+          // Sell call: unlimited risk, estimate as 3x strike price
+          return sum + (parseFloat(option.strikePrice) * 3 * contracts * 100);
+        }
+      }
     }, 0);
-    const totalMarketValue = totalStockValue + optionValue;
+
     const cashBalance = guestCashBalance; // Use editable cash balance
-    const netLiquidationValue = totalStockValue + optionValue + cashBalance;
-    const leverageRatio = netLiquidationValue > 0 ? totalMarketValue / netLiquidationValue : 0;
+    const totalEquity = totalStockValue + cashBalance;
+    const totalRiskExposure = totalStockValue + optionMaxLoss;
+    const leverageRatio = totalEquity > 0 ? totalRiskExposure / totalEquity : 0;
     
     return {
       stockValue: totalStockValue.toFixed(2),
