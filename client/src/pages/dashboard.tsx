@@ -305,20 +305,54 @@ export default function Dashboard() {
     timestamp: new Date().toISOString()
   });
 
+  // Mutation to update portfolio cash balance for authenticated users
+  const updateCashMutation = useMutation({
+    mutationFn: async (newBalance: number) => {
+      if (!portfolioId) throw new Error("No portfolio ID");
+      const response = await apiRequest("PUT", `/api/portfolio/${portfolioId}`, {
+        cashBalance: newBalance.toFixed(2)
+      });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      // Invalidate queries to refresh data
+      queryClient.invalidateQueries({ queryKey: [`/api/portfolio-details-simple?portfolioId=${portfolioId}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/portfolio-risk-simple?portfolioId=${portfolioId}`] });
+      toast({
+        title: "更新成功",
+        description: `现金余额已更新为 $${parseFloat(data.cashBalance).toLocaleString()}`,
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "更新失败",
+        description: error instanceof Error ? error.message : "无法更新现金余额",
+        variant: "destructive",
+      });
+    }
+  });
+
   // Handle cash balance editing
   const handleCashEdit = () => {
-    setTempCashValue(guestCashBalance.toString());
+    const currentBalance = isGuest ? guestCashBalance : parseFloat(actualPortfolio?.cashBalance || "0");
+    setTempCashValue(currentBalance.toString());
     setEditingCash(true);
   };
 
   const handleCashSave = () => {
     const newBalance = parseFloat(tempCashValue);
     if (!isNaN(newBalance) && newBalance >= 0) {
-      saveCashBalance(newBalance);
-      toast({
-        title: "更新成功",
-        description: `现金余额已更新为 $${newBalance.toLocaleString()}`,
-      });
+      if (isGuest) {
+        // Guest mode: save to localStorage
+        saveCashBalance(newBalance);
+        toast({
+          title: "更新成功",
+          description: `现金余额已更新为 $${newBalance.toLocaleString()}`,
+        });
+      } else {
+        // Authenticated mode: call API
+        updateCashMutation.mutate(newBalance);
+      }
     } else {
       toast({
         title: "输入错误",
@@ -785,18 +819,17 @@ export default function Dashboard() {
               <div className="bg-slate-800 rounded-xl p-3 sm:p-4 border border-gray-700">
                 <div className="text-xs sm:text-sm text-gray-400 flex items-center">
                   现金余额
-                  {isGuest && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="ml-2 h-6 w-6 p-0 text-gray-400 hover:text-white"
-                      onClick={handleCashEdit}
-                    >
-                      <Edit2 className="h-3 w-3" />
-                    </Button>
-                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="ml-2 h-6 w-6 p-0 text-gray-400 hover:text-white"
+                    onClick={handleCashEdit}
+                    disabled={editingCash || updateCashMutation.isPending}
+                  >
+                    <Edit2 className="h-3 w-3" />
+                  </Button>
                 </div>
-                {editingCash && isGuest ? (
+                {editingCash ? (
                   <div className="flex items-center mt-2">
                     <Input
                       type="number"
@@ -804,12 +837,14 @@ export default function Dashboard() {
                       onChange={(e) => setTempCashValue(e.target.value)}
                       className="h-8 text-sm bg-slate-700 border-gray-600"
                       placeholder="输入金额"
+                      disabled={updateCashMutation.isPending}
                     />
                     <Button
                       variant="ghost"
                       size="sm"
                       className="ml-1 h-6 w-6 p-0 text-green-500"
                       onClick={handleCashSave}
+                      disabled={updateCashMutation.isPending}
                     >
                       <Check className="h-3 w-3" />
                     </Button>
@@ -818,6 +853,7 @@ export default function Dashboard() {
                       size="sm"
                       className="ml-1 h-6 w-6 p-0 text-red-500"
                       onClick={handleCashCancel}
+                      disabled={updateCashMutation.isPending}
                     >
                       <X className="h-3 w-3" />
                     </Button>
@@ -829,6 +865,11 @@ export default function Dashboard() {
                 ) : (
                   <div className="text-xl sm:text-2xl font-bold text-primary">
                     ${parseFloat(actualPortfolio.cashBalance || "0").toLocaleString()}
+                  </div>
+                )}
+                {updateCashMutation.isPending && (
+                  <div className="text-xs text-gray-400 mt-1">
+                    更新中...
                   </div>
                 )}
               </div>
