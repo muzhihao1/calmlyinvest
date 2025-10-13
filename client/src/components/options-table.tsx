@@ -195,7 +195,7 @@ export function OptionsTable({ holdings, portfolioId }: OptionsTableProps) {
               <TableHead className="text-gray-400">执行价</TableHead>
               <TableHead className="text-gray-400">到期日</TableHead>
               <TableHead className="text-gray-400">Delta</TableHead>
-              <TableHead className="text-gray-400">未实现盈亏</TableHead>
+              <TableHead className="text-gray-400">未实现盈亏（总）</TableHead>
               <TableHead className="text-gray-400">最大风险</TableHead>
               <TableHead className="text-gray-400">操作</TableHead>
             </TableRow>

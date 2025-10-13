@@ -812,7 +812,7 @@ export default function Dashboard() {
                 </div>
               </div>
               <div className="bg-slate-800 rounded-xl p-3 sm:p-4 border border-gray-700">
-                <div className="text-xs sm:text-sm text-gray-400">未实现盈亏</div>
+                <div className="text-xs sm:text-sm text-gray-400">未实现盈亏（总）</div>
                 <div className="text-xl sm:text-2xl font-bold">
                   {portfoliosLoading || riskLoading || !actualRiskMetrics ? (
                     <span className="text-gray-500">加载中...</span>
