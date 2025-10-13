@@ -143,6 +143,115 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       console.error('Error in GET /portfolio-options-simple:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
+  } else if (req.method === 'POST') {
+    try {
+      const authHeader = req.headers.authorization;
+      const isGuestMode = req.headers['x-guest-user'] === 'true';
+
+      if (isGuestMode || !authHeader) {
+        // Guest mode not supported for options
+        return res.status(401).json({ error: 'Authentication required for option operations' });
+      }
+
+      const token = authHeader.replace('Bearer ', '');
+
+      // Verify user authentication
+      const supabaseAuth = createClient(supabaseUrl!, supabaseAnonKey!, {
+        global: {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      });
+
+      const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
+
+      if (authError || !user) {
+        console.error('Auth error:', authError);
+        return res.status(401).json({ error: 'Invalid token' });
+      }
+
+      // Use admin client for database operations
+      if (!supabaseServiceKey) {
+        console.error('Missing SUPABASE_SERVICE_ROLE_KEY');
+        return res.status(500).json({ error: 'Server configuration error' });
+      }
+
+      const supabaseAdmin = createClient(supabaseUrl!, supabaseServiceKey);
+
+      // Verify portfolio belongs to user
+      const { data: portfolio, error: portfolioError } = await supabaseAdmin
+        .from('portfolios')
+        .select('user_id')
+        .eq('id', portfolioId)
+        .single();
+
+      if (portfolioError || !portfolio) {
+        console.error('Portfolio error:', portfolioError);
+        return res.status(404).json({ error: 'Portfolio not found' });
+      }
+
+      if (portfolio.user_id !== user.id) {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+
+      // Create new option holding
+      const optionData = req.body;
+
+      const newOption = {
+        portfolio_id: portfolioId,
+        option_symbol: optionData.optionSymbol,
+        underlying_symbol: optionData.underlyingSymbol,
+        option_type: optionData.optionType,
+        direction: optionData.direction,
+        contracts: parseInt(optionData.contracts),
+        strike_price: parseFloat(optionData.strikePrice),
+        expiration_date: optionData.expirationDate,
+        cost_price: parseFloat(optionData.costPrice),
+        current_price: parseFloat(optionData.currentPrice || optionData.costPrice),
+        delta_value: parseFloat(optionData.deltaValue || '0'),
+        status: 'ACTIVE'
+        // Note: created_at and updated_at are auto-generated
+      };
+
+      console.log('[portfolio-options-simple] Creating option:', newOption);
+
+      const { data: insertedOption, error: insertError } = await supabaseAdmin
+        .from('option_holdings')
+        .insert([newOption])
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error('Error creating option:', insertError);
+        return res.status(500).json({ error: 'Failed to create option', details: insertError.message });
+      }
+
+      // Transform snake_case to camelCase for frontend
+      const transformedOption = {
+        id: insertedOption.id,
+        portfolioId: insertedOption.portfolio_id,
+        optionSymbol: insertedOption.option_symbol,
+        underlyingSymbol: insertedOption.underlying_symbol,
+        optionType: insertedOption.option_type,
+        direction: insertedOption.direction,
+        contracts: insertedOption.contracts,
+        strikePrice: insertedOption.strike_price,
+        expirationDate: insertedOption.expiration_date,
+        costPrice: insertedOption.cost_price,
+        currentPrice: insertedOption.current_price,
+        deltaValue: insertedOption.delta_value,
+        createdAt: insertedOption.created_at,
+        updatedAt: insertedOption.updated_at
+      };
+
+      console.log('[portfolio-options-simple] Option created successfully:', transformedOption);
+
+      res.status(201).json(transformedOption);
+    } catch (error) {
+      console.error('Error in POST /portfolio-options-simple:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
   } else {
     res.status(405).json({ error: 'Method not allowed' });
   }
