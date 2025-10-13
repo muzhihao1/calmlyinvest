@@ -167,12 +167,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // Long option: positive market value (asset)
         totalOptionValue += optionMarketValue;
         // Unrealized P&L: profit when price goes up
-        totalOptionUnrealizedPnL += (currentPrice - costPrice) * contracts * 100;
+        const pnl = (currentPrice - costPrice) * contracts * 100;
+        totalOptionUnrealizedPnL += pnl;
+        console.log(`[Option P&L] ${option.option_symbol} BUY: (${currentPrice} - ${costPrice}) × ${contracts} × 100 = $${pnl.toFixed(2)}`);
       } else if (direction === 'SELL') {
         // Short option: negative market value (liability)
         totalOptionValue -= optionMarketValue;
         // Unrealized P&L: profit when price goes down
-        totalOptionUnrealizedPnL += (costPrice - currentPrice) * contracts * 100;
+        const pnl = (costPrice - currentPrice) * contracts * 100;
+        totalOptionUnrealizedPnL += pnl;
+        console.log(`[Option P&L] ${option.option_symbol} SELL: (${costPrice} - ${currentPrice}) × ${contracts} × 100 = $${pnl.toFixed(2)}`);
       }
 
       // Calculate potential max loss based on strategy
