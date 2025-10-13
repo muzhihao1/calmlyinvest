@@ -135,9 +135,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           quantity: parseInt(stockData.quantity),
           cost_price: parseFloat(stockData.costPrice),
           current_price: parseFloat(stockData.currentPrice || stockData.costPrice),
-          beta: parseFloat(stockData.beta || '1.0'),
-          market_value: parseFloat(stockData.quantity) * parseFloat(stockData.currentPrice || stockData.costPrice),
-          unrealized_pnl: (parseFloat(stockData.currentPrice || stockData.costPrice) - parseFloat(stockData.costPrice)) * parseFloat(stockData.quantity)
+          beta: parseFloat(stockData.beta || '1.0')
+          // Note: market_value and unrealized_pnl are calculated fields, not stored in DB
         };
         
         const { data: insertedStock, error: insertError } = await supabase
