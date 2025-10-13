@@ -259,7 +259,7 @@ export function AddHoldingDialog({ open, onOpenChange, type, portfolioId }: AddH
         return saveStockToLocalStorage(finalData);
       } else {
         // 认证模式：调用 API
-        const response = await apiRequest("POST", `/api/portfolio-stocks-add?portfolioId=${portfolioId}`, finalData);
+        const response = await apiRequest("POST", `/api/portfolio-stocks-simple?portfolioId=${portfolioId}`, finalData);
         return response.json();
       }
     },
@@ -302,7 +302,7 @@ export function AddHoldingDialog({ open, onOpenChange, type, portfolioId }: AddH
         return saveOptionToLocalStorage(finalData);
       } else {
         // 认证模式：调用 API
-        const response = await apiRequest("POST", `/api/portfolio-options-add?portfolioId=${portfolioId}`, finalData);
+        const response = await apiRequest("POST", `/api/portfolio-options-simple?portfolioId=${portfolioId}`, finalData);
         return response.json();
       }
     },
