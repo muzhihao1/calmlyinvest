@@ -183,6 +183,127 @@ async function getOptionQuoteFromMarketData(optionSymbol: string): Promise<{
 }
 
 /**
+ * Validate option price for reasonableness
+ *
+ * Checks if the fetched price makes sense given:
+ * - Underlying stock price
+ * - Strike price
+ * - Option type (CALL/PUT)
+ * - Time to expiration
+ *
+ * Returns validation result with warning if price seems suspicious
+ */
+interface PriceValidationResult {
+  isValid: boolean;
+  warning?: string;
+  suggestedAction?: string;
+}
+
+async function validateOptionPrice(
+  optionPrice: number,
+  optionSymbol: string,
+  underlyingSymbol: string,
+  strikePrice: number,
+  optionType: 'C' | 'P',
+  expirationDate: string
+): Promise<PriceValidationResult> {
+  try {
+    // Fetch underlying stock price
+    const stockData = await fetchStockData(underlyingSymbol);
+    if (!stockData) {
+      return {
+        isValid: true, // Can't validate without stock price
+        warning: `无法获取 ${underlyingSymbol} 股票价格，跳过验证`
+      };
+    }
+
+    const stockPrice = stockData.price;
+
+    // Calculate intrinsic value
+    let intrinsicValue = 0;
+    if (optionType === 'C') {
+      // Call option: max(stock - strike, 0)
+      intrinsicValue = Math.max(stockPrice - strikePrice, 0);
+    } else {
+      // Put option: max(strike - stock, 0)
+      intrinsicValue = Math.max(strikePrice - stockPrice, 0);
+    }
+
+    // Calculate days to expiration
+    const today = new Date();
+    const expDate = new Date(expirationDate);
+    const daysToExpiration = Math.ceil((expDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+    // Basic sanity checks
+
+    // 1. Option price should never be negative
+    if (optionPrice < 0) {
+      return {
+        isValid: false,
+        warning: `❌ 期权价格为负数: $${optionPrice}`,
+        suggestedAction: '使用成本价或手动输入正确价格'
+      };
+    }
+
+    // 2. Option price should never be less than intrinsic value
+    if (optionPrice < intrinsicValue - 0.01) { // Small tolerance for rounding
+      return {
+        isValid: false,
+        warning: `❌ 期权价格 ($${optionPrice.toFixed(2)}) 低于内在价值 ($${intrinsicValue.toFixed(2)})`,
+        suggestedAction: '检查数据源，可能是过期数据'
+      };
+    }
+
+    // 3. Time value should be reasonable (not too high)
+    const timeValue = optionPrice - intrinsicValue;
+    const maxReasonableTimeValue = stockPrice * 0.15; // 15% of stock price is generous
+
+    if (timeValue > maxReasonableTimeValue) {
+      return {
+        isValid: false,
+        warning: `⚠️ 时间价值过高: $${timeValue.toFixed(2)} (期权价格=$${optionPrice.toFixed(2)}, 内在价值=$${intrinsicValue.toFixed(2)})`,
+        suggestedAction: '可能是延迟数据或数据错误，建议手动验证'
+      };
+    }
+
+    // 4. For near-expiration options, time value should decay
+    if (daysToExpiration <= 7 && timeValue > stockPrice * 0.05) {
+      return {
+        isValid: false,
+        warning: `⚠️ 临近到期(${daysToExpiration}天)但时间价值仍高达 $${timeValue.toFixed(2)}`,
+        suggestedAction: '可能是过期数据，建议手动核实'
+      };
+    }
+
+    // 5. Check for extremely out-of-the-money options with high prices
+    const moneyness = optionType === 'C'
+      ? (stockPrice - strikePrice) / strikePrice
+      : (strikePrice - stockPrice) / stockPrice;
+
+    if (moneyness < -0.05 && optionPrice > stockPrice * 0.03) { // 5% OTM but price > 3% of stock
+      return {
+        isValid: false,
+        warning: `⚠️ 虚值期权(OTM ${Math.abs(moneyness * 100).toFixed(1)}%)但价格过高: $${optionPrice.toFixed(2)}`,
+        suggestedAction: '检查行权价是否正确，可能是数据源错误'
+      };
+    }
+
+    // All checks passed
+    console.log(`✅ Price validation passed for ${optionSymbol}: $${optionPrice.toFixed(2)} (intrinsic=$${intrinsicValue.toFixed(2)}, time=$${timeValue.toFixed(2)})`);
+    return {
+      isValid: true
+    };
+
+  } catch (error) {
+    console.error(`Error validating price for ${optionSymbol}:`, error);
+    return {
+      isValid: true, // Don't block on validation errors
+      warning: '价格验证失败，跳过检查'
+    };
+  }
+}
+
+/**
  * Fetch option price from Yahoo Finance
  * Fallback when Market Data API is not available
  */
@@ -379,6 +500,37 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         console.log(`🔍 Market Data result for ${option.option_symbol}:`, marketDataQuote ? `Price=${marketDataQuote.price}, Delta=${marketDataQuote.delta}` : 'NULL (fallback will be used)');
 
         if (marketDataQuote) {
+          // Validate the fetched price before updating
+          // Parse strike price and option type from symbol (e.g., "NVDA 251121P190")
+          const symbolMatch = option.option_symbol.match(/([A-Z]+)\s?(\d{6})([CP])(\d+(?:\.\d+)?)/);
+          if (symbolMatch) {
+            const [, underlying, , optionType, strikeStr] = symbolMatch;
+            const strikePrice = parseFloat(strikeStr);
+
+            // Validate the price
+            const validation = await validateOptionPrice(
+              marketDataQuote.price,
+              option.option_symbol,
+              option.underlying_symbol,
+              strikePrice,
+              optionType as 'C' | 'P',
+              option.expiration_date
+            );
+
+            if (!validation.isValid) {
+              console.warn(`⚠️ Price validation FAILED for ${option.option_symbol}:`);
+              console.warn(`   ${validation.warning}`);
+              console.warn(`   ${validation.suggestedAction}`);
+              console.warn(`   ⚠️ Keeping current price: $${option.current_price} (API price rejected: $${marketDataQuote.price.toFixed(2)})`);
+
+              // Keep current price, don't update
+              optionsUpdated++;
+              continue; // Skip this option
+            } else if (validation.warning) {
+              console.log(`ℹ️ Validation note for ${option.option_symbol}: ${validation.warning}`);
+            }
+          }
+
           // Update with real market data (price + Delta)
           console.log(`💾 Attempting DB update for option ID ${option.id}: current_price=${marketDataQuote.price.toFixed(2)}, delta_value=${marketDataQuote.delta.toFixed(4)}`);
 
