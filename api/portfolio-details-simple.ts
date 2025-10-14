@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
+import { extractToken } from './_helpers/token-parser';
 
 const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
@@ -48,7 +49,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(404).json({ error: 'Portfolio not found' });
       }
 
-      const token = authHeader.replace('Bearer ', '');
+      const token = extractToken(authHeader);
+
+      if (!token) {
+        console.error('[portfolio-details-simple] Token extraction failed');
+        return res.status(401).json({ error: 'Invalid or malformed authorization token' });
+      }
 
       // Verify user authentication
       const supabaseAuth = createClient(supabaseUrl!, supabaseAnonKey!, {
@@ -168,7 +174,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(401).json({ error: 'Authentication required' });
       }
 
-      const token = authHeader.replace('Bearer ', '');
+      const token = extractToken(authHeader);
+
+      if (!token) {
+        console.error('[portfolio-details-simple] Token extraction failed in PUT');
+        return res.status(401).json({ error: 'Invalid or malformed authorization token' });
+      }
 
       // Verify user authentication
       const supabaseAuth = createClient(supabaseUrl!, supabaseAnonKey!, {

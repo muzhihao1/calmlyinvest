@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
+import { extractToken } from './_helpers/token-parser';
 
 // Initialize Supabase client
 const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
@@ -43,12 +44,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           res.status(401).json({ error: 'Authorization required' });
           return;
         }
-        
-        const token = authHeader.replace('Bearer ', '');
-        
+
+        const token = extractToken(authHeader);
+
+        if (!token) {
+          console.error('[portfolio-stocks-simple] Token extraction failed');
+          res.status(401).json({ error: 'Invalid or malformed authorization token' });
+          return;
+        }
+
         // Verify the user with Supabase
         const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-        
+
         if (authError || !user) {
           res.status(401).json({ error: 'Invalid token' });
           return;
@@ -116,12 +123,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           res.status(401).json({ error: 'Authorization required' });
           return;
         }
-        
-        const token = authHeader.replace('Bearer ', '');
-        
+
+        const token = extractToken(authHeader);
+
+        if (!token) {
+          console.error('[portfolio-stocks-simple] Token extraction failed in POST');
+          res.status(401).json({ error: 'Invalid or malformed authorization token' });
+          return;
+        }
+
         // Verify the user with Supabase
         const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-        
+
         if (authError || !user) {
           res.status(401).json({ error: 'Invalid token' });
           return;
