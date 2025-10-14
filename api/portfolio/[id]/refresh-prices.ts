@@ -130,6 +130,17 @@ async function getOptionQuoteFromMarketData(optionSymbol: string): Promise<{
       }
     );
 
+    console.log(`📡 Market Data API Response for ${optionSymbol}:`, JSON.stringify({
+      status: response.data.s,
+      symbol: response.data.optionSymbol,
+      bid: response.data.bid,
+      ask: response.data.ask,
+      mid: response.data.mid,
+      last: response.data.last,
+      delta: response.data.delta,
+      updated: response.data.updated
+    }, null, 2));
+
     if (response.data.s !== 'ok') {
       throw new Error(`Invalid response status: ${response.data.s}`);
     }
@@ -137,11 +148,12 @@ async function getOptionQuoteFromMarketData(optionSymbol: string): Promise<{
     const data = response.data;
 
     if (!data.mid || data.mid.length === 0) {
-      throw new Error('No data returned from Market Data API');
+      console.warn(`⚠️ No mid price for ${optionSymbol}, trying fallback...`);
+      console.log(`   Bid: ${data.bid}, Ask: ${data.ask}, Last: ${data.last}`);
     }
 
     // Determine option price (prefer mid, fallback to last or avg of bid/ask)
-    let price = data.mid[0];
+    let price = data.mid && data.mid[0] ? data.mid[0] : null;
 
     if (!price || price === 0) {
       if (data.last && data.last[0] > 0) {
