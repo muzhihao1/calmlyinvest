@@ -182,37 +182,39 @@ async function getOptionQuoteFromMarketData(optionSymbol: string): Promise<{
 }
 
 /**
- * Estimate option price based on underlying stock price
+ * Fetch option price from Yahoo Finance
  * Fallback when Market Data API is not available
  */
-async function estimateOptionPrice(optionSymbol: string, underlyingSymbol: string): Promise<number | null> {
+async function fetchOptionPriceFromYahoo(optionSymbol: string, underlyingSymbol: string): Promise<number | null> {
   try {
-    // Fetch underlying stock price
-    const stockData = await fetchStockData(underlyingSymbol);
-    if (!stockData) return null;
+    const yahooFinance = await getYahooFinance();
 
-    const stockPrice = stockData.price;
+    // Convert our format to Yahoo Finance format
+    // Our format: "MSFT 251024P515" or "MSFT251024P515"
+    // Yahoo format: "MSFT251024P00515000"
+    const yahooSymbol = convertToMarketDataSymbol(optionSymbol);
 
-    // Parse option symbol to extract strike price and type
-    // Format: "MSFT 250718P500" -> Strike: 500, Type: Put
-    const match = optionSymbol.match(/(\d+)$/);
-    const strikePrice = match ? parseInt(match[1]) : 100;
+    console.log(`🔍 Trying Yahoo Finance for option: ${yahooSymbol}`);
 
-    const isCall = optionSymbol.includes('C');
-    const inTheMoney = isCall ? (stockPrice > strikePrice) : (stockPrice < strikePrice);
+    try {
+      const quote = await yahooFinance.quote(yahooSymbol);
 
-    // Simple estimation
-    let estimatedPrice: number;
-    if (inTheMoney) {
-      estimatedPrice = Math.abs(stockPrice - strikePrice) + (stockPrice * 0.02);
-    } else {
-      estimatedPrice = stockPrice * 0.02;
+      // Yahoo returns option prices in regularMarketPrice, bid, ask
+      let price = quote.regularMarketPrice || quote.bid || quote.ask;
+
+      if (price && price > 0) {
+        console.log(`✅ Yahoo Finance: ${optionSymbol} = $${price.toFixed(2)}`);
+        return price;
+      }
+    } catch (yahooError) {
+      console.warn(`⚠️ Yahoo Finance failed for ${yahooSymbol}, trying alternative format...`);
     }
 
-    console.log(`Estimated price for ${optionSymbol}: $${estimatedPrice}`);
-    return estimatedPrice;
+    // If Yahoo Finance fails, return null (caller will use cost price as fallback)
+    console.warn(`⚠️ Could not fetch price for ${optionSymbol} from Yahoo Finance`);
+    return null;
   } catch (error) {
-    console.error(`Failed to estimate option price for ${optionSymbol}:`, error);
+    console.error(`Failed to fetch option price from Yahoo for ${optionSymbol}:`, error);
     return null;
   }
 }
@@ -394,30 +396,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             console.error(`✗ Failed to update option ${option.option_symbol}:`, JSON.stringify(updateError));
           }
         } else {
-          // Fallback to estimation (no Delta update)
-          console.log(`⚠️ Falling back to estimation for ${option.option_symbol}`);
-          const estimatedPrice = await estimateOptionPrice(option.option_symbol, option.underlying_symbol);
+          // Fallback to Yahoo Finance
+          console.log(`⚠️ Falling back to Yahoo Finance for ${option.option_symbol}`);
+          const yahooPrice = await fetchOptionPriceFromYahoo(option.option_symbol, option.underlying_symbol);
 
-          if (estimatedPrice !== null) {
+          if (yahooPrice !== null) {
             const { error: updateError } = await supabaseAdmin
               .from('option_holdings')
               .update({
-                current_price: estimatedPrice.toFixed(2),
+                current_price: yahooPrice.toFixed(2),
                 updated_at: new Date().toISOString()
-                // Note: Delta not updated when using fallback estimation
+                // Note: Delta not updated when using Yahoo Finance fallback
               })
               .eq('id', option.id);
 
             if (!updateError) {
               optionsUpdated++;
-              console.log(`✓ Updated option ${option.option_symbol} (estimated): $${estimatedPrice.toFixed(2)}`);
+              console.log(`✓ Updated option ${option.option_symbol} (from Yahoo): $${yahooPrice.toFixed(2)}`);
             } else {
               optionsFailed++;
               console.error(`✗ Failed to update option ${option.option_symbol}:`, updateError);
             }
           } else {
+            // Last resort: keep current price unchanged
             optionsFailed++;
-            console.error(`✗ Failed to estimate price for option ${option.option_symbol}`);
+            console.error(`✗ Could not fetch price for option ${option.option_symbol}, keeping current price`);
           }
         }
       } catch (error) {
