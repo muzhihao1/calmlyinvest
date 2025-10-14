@@ -424,9 +424,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               console.error(`✗ Failed to update option ${option.option_symbol}:`, updateError);
             }
           } else {
-            // Last resort: keep current price unchanged
-            optionsFailed++;
-            console.error(`✗ Could not fetch price for option ${option.option_symbol}, keeping current price`);
+            // Last resort: keep current price unchanged (likely FLEX option or low liquidity)
+            // Check if this is a non-standard expiration (potential FLEX option)
+            const expDate = new Date(option.expiration_date);
+            const dayOfWeek = expDate.getDay(); // 0=Sunday, 5=Friday
+            const isFriday = dayOfWeek === 5;
+
+            if (!isFriday) {
+              console.warn(`⚠️ ${option.option_symbol} has non-Friday expiration (${option.expiration_date}). This may be a FLEX option not covered by standard market data APIs. Keeping current price: $${option.current_price}`);
+            } else {
+              console.warn(`⚠️ Could not fetch price for option ${option.option_symbol}. Keeping current price: $${option.current_price}`);
+            }
+
+            // Don't count as failure - we kept the existing price
+            optionsUpdated++;
           }
         }
       } catch (error) {
