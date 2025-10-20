@@ -1,27 +1,2 @@
-# Archived API endpoints
+# Archived API endpoints only
 api/_archived
-
-# Test files
-api/test
-api/simple-test.ts
-api/test-dynamic.ts
-api/portfolios/static-test.ts
-
-# Development and temporary files
-*.log
-*.swp
-.DS_Store
-.env.local
-.env.development
-
-# Scripts and migrations (not needed for deployment)
-scripts
-migrations
-
-# Documentation
-*.md
-!README.md
-
-# Git files
-.git
-.gitignore
