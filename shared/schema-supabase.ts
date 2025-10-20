@@ -125,25 +125,35 @@ export const riskHistory = pgTable("risk_history", {
   recordedAt: timestamp("recorded_at", { withTimezone: true }).defaultNow(),
 });
 
-// Types - Using drizzle's built-in type inference
-export type Portfolio = typeof portfolios.$inferSelect;
-export type InsertPortfolio = typeof portfolios.$inferInsert;
+// Types - Using drizzle's built-in type inference with timestamp override
+// Override timestamp fields to use string instead of Date for API compatibility
+type WithStringTimestamps<T> = Omit<T, 'createdAt' | 'updatedAt' | 'closedAt' | 'rolloverDate' | 'calculatedAt' | 'recordedAt'> & {
+  createdAt?: string;
+  updatedAt?: string;
+  closedAt?: string;
+  rolloverDate?: string;
+  calculatedAt?: string;
+  recordedAt?: string;
+};
 
-export type StockHolding = typeof stockHoldings.$inferSelect;
-export type InsertStockHolding = typeof stockHoldings.$inferInsert;
+export type Portfolio = WithStringTimestamps<typeof portfolios.$inferSelect>;
+export type InsertPortfolio = WithStringTimestamps<typeof portfolios.$inferInsert>;
 
-export type OptionHolding = typeof optionHoldings.$inferSelect;
-export type InsertOptionHolding = typeof optionHoldings.$inferInsert;
+export type StockHolding = WithStringTimestamps<typeof stockHoldings.$inferSelect>;
+export type InsertStockHolding = WithStringTimestamps<typeof stockHoldings.$inferInsert>;
 
-export type OptionRollover = typeof optionRollovers.$inferSelect;
-export type InsertOptionRollover = typeof optionRollovers.$inferInsert;
+export type OptionHolding = WithStringTimestamps<typeof optionHoldings.$inferSelect>;
+export type InsertOptionHolding = WithStringTimestamps<typeof optionHoldings.$inferInsert>;
 
-export type RiskMetrics = typeof riskMetrics.$inferSelect;
+export type OptionRollover = WithStringTimestamps<typeof optionRollovers.$inferSelect>;
+export type InsertOptionRollover = WithStringTimestamps<typeof optionRollovers.$inferInsert>;
 
-export type RiskSettings = typeof riskSettings.$inferSelect;
-export type InsertRiskSettings = typeof riskSettings.$inferInsert;
+export type RiskMetrics = WithStringTimestamps<typeof riskMetrics.$inferSelect>;
 
-export type RiskHistory = typeof riskHistory.$inferSelect;
+export type RiskSettings = WithStringTimestamps<typeof riskSettings.$inferSelect>;
+export type InsertRiskSettings = WithStringTimestamps<typeof riskSettings.$inferInsert>;
+
+export type RiskHistory = WithStringTimestamps<typeof riskHistory.$inferSelect>;
 
 // Zod schemas for validation (optional, for API validation)
 export const insertPortfolioSchema = createInsertSchema(portfolios);
