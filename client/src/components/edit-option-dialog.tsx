@@ -39,7 +39,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { OptionHolding } from "@shared/schema-types";
+import type { OptionHolding } from "@shared/schema-supabase";
 
 const editOptionFormSchema = z.object({
   underlyingSymbol: z.string().min(1, "标的股票不能为空").toUpperCase(),

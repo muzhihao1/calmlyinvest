@@ -12,7 +12,7 @@ import type {
   InsertStockHolding,
   InsertOptionHolding,
   InsertRiskSettings
-} from "@shared/schema-types";
+} from "@shared/schema-supabase";
 
 export class StorageWrapper {
   private getStorage(req: Request) {

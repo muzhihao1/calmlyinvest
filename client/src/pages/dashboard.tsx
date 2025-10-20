@@ -18,7 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient-supabase";
 import { useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/auth-context";
-import type { Portfolio, StockHolding, OptionHolding, RiskSettings } from "@shared/schema-types";
+import type { Portfolio, StockHolding, OptionHolding, RiskSettings } from "@shared/schema-supabase";
 import type { Suggestion } from "@/components/smart-suggestions";
 
 export default function Dashboard() {

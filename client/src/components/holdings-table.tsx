@@ -14,7 +14,7 @@ import { Edit, Trash2, FileUp, Download, ArrowUpDown, ArrowUp, ArrowDown } from 
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { EditHoldingDialog } from "./edit-holding-dialog";
-import type { StockHolding } from "@shared/schema-types";
+import type { StockHolding } from "@shared/schema-supabase";
 
 interface HoldingsTableProps {
   holdings: StockHolding[];

@@ -157,8 +157,35 @@ export type InsertRiskSettings = WithStringTimestamps<typeof riskSettings.$infer
 export type RiskHistory = WithStringTimestamps<typeof riskHistory.$inferSelect>;
 
 // Zod schemas for validation (optional, for API validation)
-export const insertPortfolioSchema = createInsertSchema(portfolios);
-export const insertStockHoldingSchema = createInsertSchema(stockHoldings);
-export const insertOptionHoldingSchema = createInsertSchema(optionHoldings);
-export const insertOptionRolloverSchema = createInsertSchema(optionRollovers);
-export const insertRiskSettingsSchema = createInsertSchema(riskSettings);
+// Omit timestamp fields to avoid Date/string type conflicts
+// Timestamp fields are handled by the database with default values
+export const insertPortfolioSchema = createInsertSchema(portfolios).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertStockHoldingSchema = createInsertSchema(stockHoldings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertOptionHoldingSchema = createInsertSchema(optionHoldings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  closedAt: true,
+});
+
+export const insertOptionRolloverSchema = createInsertSchema(optionRollovers).omit({
+  id: true,
+  createdAt: true,
+  rolloverDate: true,
+});
+
+export const insertRiskSettingsSchema = createInsertSchema(riskSettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});

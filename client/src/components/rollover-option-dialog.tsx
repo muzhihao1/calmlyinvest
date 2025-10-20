@@ -21,7 +21,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import type { OptionHolding } from "@shared/schema-types";
+import type { OptionHolding } from "@shared/schema-supabase";
 
 interface RolloverOptionDialogProps {
   option: OptionHolding | null;

@@ -1,4 +1,4 @@
-import type { Portfolio, StockHolding, OptionHolding, RiskSettings } from "@shared/schema-types";
+import type { Portfolio, StockHolding, OptionHolding, RiskSettings } from "@shared/schema-supabase";
 
 export const DEMO_PORTFOLIO: Portfolio = {
   id: "demo-portfolio-1",

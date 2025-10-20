@@ -16,7 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth-context";
 import { EditOptionDialog } from "./edit-option-dialog";
 import { RolloverOptionDialog } from "./rollover-option-dialog";
-import type { OptionHolding } from "@shared/schema-types";
+import type { OptionHolding } from "@shared/schema-supabase";
 
 interface OptionsTableProps {
   holdings: OptionHolding[];

@@ -36,7 +36,7 @@ import { cn } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth-context";
-import { insertStockHoldingSchema, insertOptionHoldingSchema } from "@shared/schema-types";
+import { insertStockHoldingSchema, insertOptionHoldingSchema } from "@shared/schema-supabase";
 
 const stockFormSchema = z.object({
   portfolioId: z.union([z.string(), z.number()]),

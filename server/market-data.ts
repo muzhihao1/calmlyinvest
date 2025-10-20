@@ -1,4 +1,4 @@
-import type { StockHolding, OptionHolding } from "@shared/schema-types";
+import type { StockHolding, OptionHolding } from "@shared/schema-supabase";
 
 // Lazy load yahoo-finance2 to avoid initialization issues
 let yahooFinanceModule: any = null;

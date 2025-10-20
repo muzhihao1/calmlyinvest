@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Save, Download, Upload, RotateCcw } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { RiskSettings } from "@shared/schema-types";
+import type { RiskSettings } from "@shared/schema-supabase";
 
 interface SettingsPanelProps {
   userId: string;

@@ -1,7 +1,7 @@
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PieChart, LineChart, BarChart } from "lucide-react";
-import type { StockHolding, OptionHolding } from "@shared/schema-types";
+import type { StockHolding, OptionHolding } from "@shared/schema-supabase";
 
 interface RiskAnalysisProps {
   stockHoldings: StockHolding[];

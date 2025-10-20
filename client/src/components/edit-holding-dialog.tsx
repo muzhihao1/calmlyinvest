@@ -22,7 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { StockHolding } from "@shared/schema-types";
+import type { StockHolding } from "@shared/schema-supabase";
 
 const editStockFormSchema = z.object({
   symbol: z.string().min(1, "股票代码不能为空").toUpperCase(),
