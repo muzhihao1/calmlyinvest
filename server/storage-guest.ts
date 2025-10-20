@@ -9,7 +9,7 @@ import type {
   InsertStockHolding,
   InsertOptionHolding,
   InsertRiskSettings
-} from "@shared/schema-supabase";
+} from "../shared/schema-supabase.js";
 
 // Demo data for guest users
 const DEMO_PORTFOLIO: Portfolio = {

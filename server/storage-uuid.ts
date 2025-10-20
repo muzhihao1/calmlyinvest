@@ -1,4 +1,4 @@
-import type { Portfolio, StockHolding, OptionHolding, RiskSettings, RiskMetrics, InsertPortfolio, InsertStockHolding, InsertOptionHolding, InsertRiskSettings } from '@shared/schema-uuid';
+import type { Portfolio, StockHolding, OptionHolding, RiskSettings, RiskMetrics, InsertPortfolio, InsertStockHolding, InsertOptionHolding, InsertRiskSettings } from '../shared/schema-uuid.js';
 
 // Updated interface for UUID-based storage
 export interface IStorage {

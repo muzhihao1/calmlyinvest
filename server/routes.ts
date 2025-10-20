@@ -5,7 +5,7 @@ import {
   insertStockHoldingSchema, 
   insertOptionHoldingSchema, 
   insertRiskSettingsSchema 
-} from "@shared/schema-supabase";
+} from "../shared/schema-supabase";
 import { z } from "zod";
 import { getMarketDataProvider, updateStockPrices, updateOptionPrices } from "./market-data";
 import { requireAuth, optionalAuth } from "./auth-supabase";
