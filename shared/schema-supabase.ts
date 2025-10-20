@@ -1,5 +1,4 @@
 import { pgTable, text, uuid, decimal, date, boolean, timestamp, integer } from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 // UUID-based schema for Supabase
@@ -157,35 +156,69 @@ export type InsertRiskSettings = WithStringTimestamps<typeof riskSettings.$infer
 export type RiskHistory = WithStringTimestamps<typeof riskHistory.$inferSelect>;
 
 // Zod schemas for validation (optional, for API validation)
-// Omit timestamp fields to avoid Date/string type conflicts
-// Timestamp fields are handled by the database with default values
-export const insertPortfolioSchema = createInsertSchema(portfolios).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
+// Note: We create custom schemas instead of using createInsertSchema
+// because createInsertSchema infers Date types, but we use string timestamps
+export const insertPortfolioSchema = z.object({
+  userId: z.string(),
+  name: z.string(),
+  totalEquity: z.string().optional(),
+  cashBalance: z.string().optional(),
+  marginUsed: z.string().optional(),
 });
 
-export const insertStockHoldingSchema = createInsertSchema(stockHoldings).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
+export const insertStockHoldingSchema = z.object({
+  portfolioId: z.string(),
+  symbol: z.string(),
+  name: z.string().optional(),
+  quantity: z.number().int(),
+  costPrice: z.string(),
+  currentPrice: z.string().optional(),
+  beta: z.string().optional(),
 });
 
-export const insertOptionHoldingSchema = createInsertSchema(optionHoldings).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-  closedAt: true,
+export const insertOptionHoldingSchema = z.object({
+  portfolioId: z.string(),
+  optionSymbol: z.string(),
+  underlyingSymbol: z.string(),
+  optionType: z.string(),
+  direction: z.string(),
+  contracts: z.number().int(),
+  strikePrice: z.string(),
+  expirationDate: z.string(),
+  costPrice: z.string(),
+  currentPrice: z.string().optional(),
+  deltaValue: z.string().optional(),
+  status: z.string().optional(),
 });
 
-export const insertOptionRolloverSchema = createInsertSchema(optionRollovers).omit({
-  id: true,
-  createdAt: true,
-  rolloverDate: true,
+export const insertOptionRolloverSchema = z.object({
+  portfolioId: z.string(),
+  oldOptionId: z.string(),
+  oldOptionSymbol: z.string(),
+  oldStrikePrice: z.string(),
+  oldExpirationDate: z.string(),
+  closePrice: z.string(),
+  closeContracts: z.number().int(),
+  newOptionId: z.string(),
+  newOptionSymbol: z.string(),
+  newStrikePrice: z.string(),
+  newExpirationDate: z.string(),
+  openPrice: z.string(),
+  openContracts: z.number().int(),
+  realizedPnl: z.string(),
+  fees: z.string().optional(),
+  notes: z.string().optional(),
 });
 
-export const insertRiskSettingsSchema = createInsertSchema(riskSettings).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
+export const insertRiskSettingsSchema = z.object({
+  userId: z.string(),
+  leverageSafeThreshold: z.string().optional(),
+  leverageWarningThreshold: z.string().optional(),
+  concentrationLimit: z.string().optional(),
+  industryConcentrationLimit: z.string().optional(),
+  minCashRatio: z.string().optional(),
+  leverageAlerts: z.boolean().optional(),
+  expirationAlerts: z.boolean().optional(),
+  volatilityAlerts: z.boolean().optional(),
+  dataUpdateFrequency: z.number().int().optional(),
 });
