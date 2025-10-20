@@ -127,13 +127,14 @@ export const riskHistory = pgTable("risk_history", {
 
 // Types - Using drizzle's built-in type inference with timestamp override
 // Override timestamp fields to use string instead of Date for API compatibility
+// Allow null values to handle API endpoints that may pass null for optional timestamps
 type WithStringTimestamps<T> = Omit<T, 'createdAt' | 'updatedAt' | 'closedAt' | 'rolloverDate' | 'calculatedAt' | 'recordedAt'> & {
-  createdAt?: string;
-  updatedAt?: string;
-  closedAt?: string;
-  rolloverDate?: string;
-  calculatedAt?: string;
-  recordedAt?: string;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+  closedAt?: string | null;
+  rolloverDate?: string | null;
+  calculatedAt?: string | null;
+  recordedAt?: string | null;
 };
 
 export type Portfolio = WithStringTimestamps<typeof portfolios.$inferSelect>;
