@@ -125,52 +125,29 @@ export const riskHistory = pgTable("risk_history", {
   recordedAt: timestamp("recorded_at", { withTimezone: true }).defaultNow(),
 });
 
-// Insert schemas
-export const insertPortfolioSchema = createInsertSchema(portfolios).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-export const insertStockHoldingSchema = createInsertSchema(stockHoldings).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-export const insertOptionHoldingSchema = createInsertSchema(optionHoldings).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-export const insertOptionRolloverSchema = createInsertSchema(optionRollovers).omit({
-  id: true,
-  createdAt: true,
-});
-
-export const insertRiskSettingsSchema = createInsertSchema(riskSettings).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-// Types
+// Types - Using drizzle's built-in type inference
 export type Portfolio = typeof portfolios.$inferSelect;
-export type InsertPortfolio = z.infer<typeof insertPortfolioSchema>;
+export type InsertPortfolio = typeof portfolios.$inferInsert;
 
 export type StockHolding = typeof stockHoldings.$inferSelect;
-export type InsertStockHolding = z.infer<typeof insertStockHoldingSchema>;
+export type InsertStockHolding = typeof stockHoldings.$inferInsert;
 
 export type OptionHolding = typeof optionHoldings.$inferSelect;
-export type InsertOptionHolding = z.infer<typeof insertOptionHoldingSchema>;
+export type InsertOptionHolding = typeof optionHoldings.$inferInsert;
 
 export type OptionRollover = typeof optionRollovers.$inferSelect;
-export type InsertOptionRollover = z.infer<typeof insertOptionRolloverSchema>;
+export type InsertOptionRollover = typeof optionRollovers.$inferInsert;
 
 export type RiskMetrics = typeof riskMetrics.$inferSelect;
 
 export type RiskSettings = typeof riskSettings.$inferSelect;
-export type InsertRiskSettings = z.infer<typeof insertRiskSettingsSchema>;
+export type InsertRiskSettings = typeof riskSettings.$inferInsert;
 
 export type RiskHistory = typeof riskHistory.$inferSelect;
+
+// Zod schemas for validation (optional, for API validation)
+export const insertPortfolioSchema = createInsertSchema(portfolios);
+export const insertStockHoldingSchema = createInsertSchema(stockHoldings);
+export const insertOptionHoldingSchema = createInsertSchema(optionHoldings);
+export const insertOptionRolloverSchema = createInsertSchema(optionRollovers);
+export const insertRiskSettingsSchema = createInsertSchema(riskSettings);
