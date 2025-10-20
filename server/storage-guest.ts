@@ -1,7 +1,7 @@
-import type { 
-  Portfolio, 
-  StockHolding, 
-  OptionHolding, 
+import type {
+  Portfolio,
+  StockHolding,
+  OptionHolding,
   RiskSettings,
   RiskMetrics,
   RiskHistory,
@@ -9,7 +9,7 @@ import type {
   InsertStockHolding,
   InsertOptionHolding,
   InsertRiskSettings
-} from "@shared/schema-types";
+} from "@shared/schema-supabase";
 
 // Demo data for guest users
 const DEMO_PORTFOLIO: Portfolio = {

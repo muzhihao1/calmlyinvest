@@ -48,11 +48,11 @@ export class SupabaseStorage {
     return {
       portfolio_id: holding.portfolioId,
       symbol: holding.symbol,
-      name: holding.name ?? null,
+      name: (holding as any).name ?? null,
       quantity: holding.quantity,
       cost_price: holding.costPrice,
-      current_price: holding.currentPrice ?? null,
-      beta: holding.beta ?? null,
+      current_price: (holding as any).currentPrice ?? null,
+      beta: (holding as any).beta ?? null,
     };
   }
 
@@ -83,9 +83,9 @@ export class SupabaseStorage {
     const dbPortfolio = {
       user_id: portfolio.userId,
       name: portfolio.name,
-      total_equity: portfolio.totalEquity,
-      cash_balance: portfolio.cashBalance,
-      margin_used: portfolio.marginUsed
+      total_equity: (portfolio as any).totalEquity,
+      cash_balance: (portfolio as any).cashBalance,
+      margin_used: (portfolio as any).marginUsed
     };
     
     const { data, error } = await this.supabase
