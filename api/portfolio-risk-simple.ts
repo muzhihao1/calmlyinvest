@@ -162,6 +162,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const cashBalance = parseFloat(portfolio.cash_balance || '0');
     const marginUsed = parseFloat(portfolio.margin_used || '0');
 
+    console.log(`📊 Portfolio Base Values (from DB):`, {
+      portfolioId,
+      userId: user.id,
+      cashBalance: cashBalance,
+      marginUsed: marginUsed,
+      totalEquity: portfolio.total_equity
+    });
+
     // Calculate stock metrics
     let totalStockValue = 0;
     let weightedBeta = 0;
@@ -301,6 +309,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // 保证金使用率: 使用实际已用保证金
     const marginUsageRatio = totalEquity > 0 ? (marginUsed / totalEquity) * 100 : 0;
+
+    console.log(`💰 Margin Usage Calculation:`, {
+      marginUsed,
+      totalEquity,
+      calculation: `(${marginUsed} / ${totalEquity}) * 100`,
+      marginUsageRatio: marginUsageRatio.toFixed(2) + '%',
+      note: marginUsed === 0 ? '⚠️ WARNING: margin_used is 0 in database!' : 'OK'
+    });
 
     // 剩余保证金（Excess Liquidity）= 净清算价值 - 维持保证金要求
     const excessLiquidity = totalEquity - maintenanceMargin;

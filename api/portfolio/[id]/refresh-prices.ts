@@ -76,6 +76,18 @@ async function fetchStockData(symbol: string): Promise<{ price: number; beta: nu
 
     // Fetch quote for current price
     const quote = await yahooFinance.quote(symbol);
+
+    // Enhanced logging to diagnose price issues
+    console.log(`📊 Yahoo Finance raw data for ${symbol}:`, {
+      regularMarketPrice: quote.regularMarketPrice,
+      ask: quote.ask,
+      bid: quote.bid,
+      regularMarketTime: quote.regularMarketTime,
+      marketState: quote.marketState,
+      longName: quote.longName,
+      shortName: quote.shortName
+    });
+
     const price = quote.regularMarketPrice || quote.ask || quote.bid || 0;
     const name = quote.longName || quote.shortName || symbol;
 
@@ -88,10 +100,10 @@ async function fetchStockData(symbol: string): Promise<{ price: number; beta: nu
       console.warn(`Failed to fetch beta for ${symbol}, using default 1.0:`, betaError);
     }
 
-    console.log(`Fetched data for ${symbol}: price=$${price}, beta=${beta}, name=${name}`);
+    console.log(`✅ Fetched data for ${symbol}: price=$${price}, beta=${beta}, name=${name}`);
     return { price, beta, name };
   } catch (error) {
-    console.error(`Failed to fetch data for ${symbol}:`, error);
+    console.error(`❌ Failed to fetch data for ${symbol}:`, error);
     return null;
   }
 }
@@ -382,6 +394,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     console.log(`Starting price refresh for portfolio ${portfolioId} (user: ${user.id})`);
 
+    // Check environment configuration
+    const marketDataConfigured = !!process.env.MARKETDATA_API_TOKEN;
+    console.log(`🔧 Environment Configuration:`, {
+      MARKETDATA_API_TOKEN: marketDataConfigured ? '✅ Configured' : '❌ Not configured (will fallback to Yahoo Finance)',
+      SUPABASE_URL: !!supabaseUrl,
+      SUPABASE_SERVICE_ROLE_KEY: !!supabaseServiceKey
+    });
+
     // Fetch stock holdings
     const { data: stocks, error: stocksError } = await supabaseAdmin
       .from('stock_holdings')
@@ -411,33 +431,40 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     let stocksFailed = 0;
     const stockUpdatePromises = (stocks || []).map(async (stock: any) => {
       try {
+        console.log(`🔄 Processing stock ${stock.symbol} (ID: ${stock.id}, current DB price: $${stock.current_price})`);
         const stockData = await fetchStockData(stock.symbol);
 
         if (stockData) {
-          const { error: updateError } = await supabaseAdmin
+          const updatePayload = {
+            current_price: stockData.price.toFixed(2),
+            beta: stockData.beta.toFixed(2),
+            name: stockData.name,
+            updated_at: new Date().toISOString()
+          };
+
+          console.log(`💾 Updating ${stock.symbol} in database:`, updatePayload);
+
+          const { data: updateResult, error: updateError } = await supabaseAdmin
             .from('stock_holdings')
-            .update({
-              current_price: stockData.price.toFixed(2),
-              beta: stockData.beta.toFixed(2),
-              name: stockData.name,
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', stock.id);
+            .update(updatePayload)
+            .eq('id', stock.id)
+            .select();
 
           if (!updateError) {
             stocksUpdated++;
-            console.log(`✓ Updated ${stock.symbol}: $${stockData.price.toFixed(2)}, beta: ${stockData.beta.toFixed(2)}`);
+            console.log(`✅ Successfully updated ${stock.symbol}: OLD=$${stock.current_price} → NEW=$${stockData.price.toFixed(2)}, beta: ${stockData.beta.toFixed(2)}`);
+            console.log(`📋 Update result:`, updateResult);
           } else {
             stocksFailed++;
-            console.error(`✗ Failed to update ${stock.symbol}:`, updateError);
+            console.error(`❌ Database update failed for ${stock.symbol}:`, JSON.stringify(updateError));
           }
         } else {
           stocksFailed++;
-          console.error(`✗ Failed to fetch data for ${stock.symbol}`);
+          console.error(`❌ Yahoo Finance returned null for ${stock.symbol}`);
         }
       } catch (error) {
         stocksFailed++;
-        console.error(`✗ Error updating ${stock.symbol}:`, error);
+        console.error(`❌ Exception while updating ${stock.symbol}:`, error);
       }
     });
 
