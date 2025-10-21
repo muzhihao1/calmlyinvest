@@ -1,6 +1,43 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
-import { extractToken } from './_helpers/token-parser';
+
+/**
+ * Extract token from Authorization header
+ * Inline implementation to avoid import issues in Vercel serverless
+ */
+function extractToken(authHeader: string | undefined): string | null {
+  if (!authHeader) {
+    console.log('[Token Parser] No Authorization header provided');
+    return null;
+  }
+
+  const normalized = authHeader.trim();
+
+  if (!normalized.startsWith('Bearer ')) {
+    console.error(`[Token Parser] Header doesn't start with "Bearer "`);
+    return null;
+  }
+
+  const token = normalized.substring(7);
+
+  if (!token || token.length === 0) {
+    console.error('[Token Parser] Token is empty after extraction');
+    return null;
+  }
+
+  const parts = token.split('.');
+  if (parts.length !== 3) {
+    console.error(`[Token Parser] Invalid JWT format: expected 3 parts, got ${parts.length}`);
+    return null;
+  }
+
+  if (parts.some(part => part.length === 0)) {
+    console.error('[Token Parser] JWT contains empty parts');
+    return null;
+  }
+
+  return token;
+}
 
 const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
