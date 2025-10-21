@@ -307,15 +307,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Long options: no maintenance requirement (fully paid)
     });
 
-    // 保证金使用率: 使用实际已用保证金
-    const marginUsageRatio = totalEquity > 0 ? (marginUsed / totalEquity) * 100 : 0;
+    // 保证金使用率: 使用维持保证金要求（占用率）
+    // 注：这表示持仓占用的保证金空间，而非实际借款
+    const marginUsageRatio = totalEquity > 0 ? (maintenanceMargin / totalEquity) * 100 : 0;
 
     console.log(`💰 Margin Usage Calculation:`, {
-      marginUsed,
+      maintenanceMargin,
       totalEquity,
-      calculation: `(${marginUsed} / ${totalEquity}) * 100`,
+      calculation: `(${maintenanceMargin} / ${totalEquity}) * 100`,
       marginUsageRatio: marginUsageRatio.toFixed(2) + '%',
-      note: marginUsed === 0 ? '⚠️ WARNING: margin_used is 0 in database!' : 'OK'
+      note: '✅ Auto-calculated from maintenance margin (not from DB margin_used field)',
+      legacyMarginUsedFromDB: marginUsed
     });
 
     // 剩余保证金（Excess Liquidity）= 净清算价值 - 维持保证金要求
