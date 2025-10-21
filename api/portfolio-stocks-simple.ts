@@ -1,16 +1,47 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
-import { extractToken } from './_helpers/token-parser';
+
+/**
+ * Extract token from Authorization header
+ * Inline implementation to avoid import issues in Vercel serverless
+ */
+function extractToken(authHeader: string | undefined): string | null {
+  if (!authHeader) {
+    console.log('[Token Parser] No Authorization header provided');
+    return null;
+  }
+
+  const normalized = authHeader.trim();
+
+  if (!normalized.startsWith('Bearer ')) {
+    console.error(`[Token Parser] Header doesn't start with "Bearer "`);
+    return null;
+  }
+
+  const token = normalized.substring(7);
+
+  if (!token || token.length === 0) {
+    console.error('[Token Parser] Token is empty after extraction');
+    return null;
+  }
+
+  const parts = token.split('.');
+  if (parts.length !== 3) {
+    console.error(`[Token Parser] Invalid JWT format: expected 3 parts, got ${parts.length}`);
+    return null;
+  }
+
+  if (parts.some(part => part.length === 0)) {
+    console.error('[Token Parser] JWT contains empty parts');
+    return null;
+  }
+
+  return token;
+}
 
 // Initialize Supabase client
 const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-if (!supabaseUrl || !supabaseServiceKey) {
-  throw new Error('Missing Supabase environment variables');
-}
-
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 // In-memory storage for guest mode (shared between functions)
 const guestStocks: Record<string, any[]> = {};
@@ -20,18 +51,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Guest-User');
-  
+
   if (req.method === 'OPTIONS') {
     res.status(200).end();
     return;
   }
-  
+
+  // Check environment variables at runtime
+  if (!supabaseUrl || !supabaseServiceKey) {
+    console.error('[portfolio-stocks-simple] Missing Supabase environment variables');
+    return res.status(500).json({
+      error: 'Server configuration error',
+      hint: 'Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY'
+    });
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
   const portfolioId = (req.query.portfolioId || req.body?.portfolioId) as string;
   const authHeader = req.headers.authorization;
-  
+
   // Check if it's guest mode
   const isGuestMode = portfolioId === 'demo-portfolio-1' || authHeader === 'Bearer guest-mode';
-  
+
   try {
     if (req.method === 'GET') {
       if (isGuestMode) {
@@ -60,7 +102,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           res.status(401).json({ error: 'Invalid token' });
           return;
         }
-        
+
         // Get stocks for this portfolio
         const { data: stocks, error: fetchError } = await supabase
           .from('stock_holdings')
@@ -69,8 +111,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           .order('created_at', { ascending: false });
 
         if (fetchError) {
-          console.error('Error fetching stocks:', fetchError);
-          res.status(500).json({ error: 'Failed to fetch stocks' });
+          console.error('[portfolio-stocks-simple] Error fetching stocks:', fetchError);
+          res.status(500).json({ error: 'Failed to fetch stocks', details: fetchError.message });
           return;
         }
 
@@ -92,7 +134,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     } else if (req.method === 'POST') {
       const stockData = req.body;
-      
+
       if (isGuestMode) {
         // Guest mode - store in memory
         const newStock = {
@@ -109,13 +151,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
         };
-        
+
         // Store in memory
         if (!guestStocks[portfolioId]) {
           guestStocks[portfolioId] = [];
         }
         guestStocks[portfolioId].push(newStock);
-        
+
         res.status(201).json(newStock);
       } else {
         // Authenticated mode - save to database
@@ -139,7 +181,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           res.status(401).json({ error: 'Invalid token' });
           return;
         }
-        
+
         // Create new stock holding
         const newStock = {
           portfolio_id: portfolioId,
@@ -149,9 +191,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           cost_price: parseFloat(stockData.costPrice),
           current_price: parseFloat(stockData.currentPrice || stockData.costPrice),
           beta: parseFloat(stockData.beta || '1.0')
-          // Note: market_value and unrealized_pnl are calculated fields, not stored in DB
         };
-        
+
         const { data: insertedStock, error: insertError } = await supabase
           .from('stock_holdings')
           .insert([newStock])
@@ -159,8 +200,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           .single();
 
         if (insertError) {
-          console.error('Error creating stock:', insertError);
-          res.status(500).json({ error: 'Failed to create stock' });
+          console.error('[portfolio-stocks-simple] Error creating stock:', insertError);
+          res.status(500).json({ error: 'Failed to create stock', details: insertError.message });
           return;
         }
 
@@ -183,8 +224,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     } else {
       res.status(405).json({ error: 'Method not allowed' });
     }
-  } catch (error) {
-    console.error('Stock API error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+  } catch (error: any) {
+    console.error('[portfolio-stocks-simple] Unexpected error:', error);
+    res.status(500).json({
+      error: 'Internal server error',
+      message: error.message || 'Unknown error'
+    });
   }
 }
