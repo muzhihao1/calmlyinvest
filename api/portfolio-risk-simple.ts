@@ -236,20 +236,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         hasHighRiskOptions = true;
 
         if (optionType === 'PUT') {
-          // Sell Put: 最大亏损 = (行权价 - 权利金) * 合约数 * 100
-          const maxLoss = (strikePrice - costPrice) * contracts * 100;
-          optionMaxLoss += Math.max(maxLoss, 0);
-          highRiskStrategies.push(`Sell ${option.underlying_symbol} Put`);
+          // Sell Put: 最大亏损 = 行权价 * 合约数 * 100
+          // 最坏情况：标的归零，需以行权价买入无价值股票
+          const maxLoss = strikePrice * contracts * 100;
+          optionMaxLoss += maxLoss;
+          console.log(`[Max Loss] Sell ${option.option_symbol} PUT: ${strikePrice} × ${contracts} × 100 = $${maxLoss.toFixed(2)}`);
+          highRiskStrategies.push(`Sell ${option.underlying_symbol} Put (Max Loss: $${maxLoss.toFixed(0)})`);
         } else if (optionType === 'CALL') {
-          // Sell Naked Call: 理论无限亏损，用3倍行权价估算
+          // Sell Naked Call: 理论无限亏损，保守估算使用3倍行权价
+          // 如果有标的价格，使用max(3×行权价, 2×当前标的价)
           const maxLoss = strikePrice * contracts * 100 * 3;
           optionMaxLoss += maxLoss;
-          highRiskStrategies.push(`Sell ${option.underlying_symbol} Naked Call`);
+          console.log(`[Max Loss] Sell ${option.option_symbol} CALL: ${strikePrice} × ${contracts} × 100 × 3 = $${maxLoss.toFixed(2)}`);
+          highRiskStrategies.push(`Sell ${option.underlying_symbol} Naked Call (Max Loss: ~$${maxLoss.toFixed(0)})`);
         }
       } else if (direction === 'BUY') {
         // Buy Put/Call: 最大亏损 = 已付权利金
         const maxLoss = costPrice * contracts * 100;
         optionMaxLoss += maxLoss;
+        console.log(`[Max Loss] Buy ${option.option_symbol}: ${costPrice} × ${contracts} × 100 = $${maxLoss.toFixed(2)}`);
       }
     });
 
@@ -266,20 +271,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       optionCount: (options || []).length
     });
 
-    // 杠杆率 = 总市值 / 净清算价值
-    // 注：使用实际市值（绝对值），而非理论最大损失
-    // 这符合IB和主流券商的杠杆率定义
+    // 杠杆率 = (正股价值 + 期权潜在最大亏损) / 总股本
+    // 风险管理原则：
+    // - 普通投资者：< 1.0倍（不使用杠杆）
+    // - 深度期权投资者：< 1.5倍（有对冲保护）
+    // - 使用期权最大损失而非市值，更保守的风险评估
+    const totalRisk = totalStockValue + optionMaxLoss;
+    const leverageRatio = totalEquity > 0 ? totalRisk / totalEquity : 0;
+
+    // 同时计算市值杠杆率（参考指标）
     const totalMarketValue = Math.abs(totalStockValue) + Math.abs(totalOptionValue);
-    const leverageRatio = totalEquity > 0 ? totalMarketValue / totalEquity : 0;
+    const marketLeverageRatio = totalEquity > 0 ? totalMarketValue / totalEquity : 0;
 
     console.log('📊 Leverage Ratio Calculation:', {
-      totalMarketValue,
-      totalStockValue,
-      totalOptionValue,
-      totalEquity,
+      stockValue: totalStockValue,
+      optionMaxLoss: optionMaxLoss,
+      totalRisk: totalRisk,
+      totalEquity: totalEquity,
       leverageRatio: leverageRatio.toFixed(2),
-      formula: `abs(${totalStockValue}) + abs(${totalOptionValue}) / ${totalEquity}`,
-      note: 'Using actual market value (not max loss)'
+      marketLeverageRatio: marketLeverageRatio.toFixed(2),
+      formula: '(stockValue + optionMaxLoss) / totalEquity',
+      warning: leverageRatio > 1.5 ? '⚠️ 杠杆率超过1.5倍，高风险!' : leverageRatio > 1.0 ? '⚠️ 已使用杠杆' : '✅ 安全范围',
+      note: '使用期权最大损失计算，更保守的风险管理'
     });
 
     const portfolioBeta = totalStockValue > 0 ? weightedBeta / totalStockValue : 0;
@@ -391,7 +404,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       portfolioId: portfolioId,
 
       // Core risk metrics based on professional principles
-      leverageRatio: leverageRatio.toFixed(2), // (股票价值 + 期权潜在最大亏损) / 总股本
+      leverageRatio: leverageRatio.toFixed(2), // 风险敞口杠杆率：(股票价值 + 期权最大损失) / 总股本
+      marketLeverageRatio: marketLeverageRatio.toFixed(2), // 市值杠杆率（参考）：总市值 / 总股本
       portfolioBeta: portfolioBeta.toFixed(2),
       maxConcentration: maxConcentration.toFixed(2),
       maxConcentrationSymbol: maxStockSymbol,
