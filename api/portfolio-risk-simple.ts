@@ -261,12 +261,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       cash: cashBalance,
       stockValue: totalStockValue,
       optionValue: totalOptionValue,
-      totalEquity: totalEquity
+      totalEquity: totalEquity,
+      stockCount: (stocks || []).length,
+      optionCount: (options || []).length
     });
 
-    // 杠杆率 = (正股价值 + 期权潜在最大亏损) / 总股本
-    const totalRisk = totalStockValue + optionMaxLoss;
-    const leverageRatio = totalEquity > 0 ? totalRisk / totalEquity : 0;
+    // 杠杆率 = 总市值 / 净清算价值
+    // 注：使用实际市值（绝对值），而非理论最大损失
+    // 这符合IB和主流券商的杠杆率定义
+    const totalMarketValue = Math.abs(totalStockValue) + Math.abs(totalOptionValue);
+    const leverageRatio = totalEquity > 0 ? totalMarketValue / totalEquity : 0;
+
+    console.log('📊 Leverage Ratio Calculation:', {
+      totalMarketValue,
+      totalStockValue,
+      totalOptionValue,
+      totalEquity,
+      leverageRatio: leverageRatio.toFixed(2),
+      formula: `abs(${totalStockValue}) + abs(${totalOptionValue}) / ${totalEquity}`,
+      note: 'Using actual market value (not max loss)'
+    });
 
     const portfolioBeta = totalStockValue > 0 ? weightedBeta / totalStockValue : 0;
 
