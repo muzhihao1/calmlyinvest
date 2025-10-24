@@ -39,9 +39,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const forceGuestMode = false;
 
   useEffect(() => {
+    console.log('🔐 Auth Context: Initializing...');
+    console.log('📍 Current domain:', window.location.origin);
+
     // Check for guest mode from URL
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('guest') === 'true') {
+      console.log('👤 Guest mode requested from URL');
       setIsGuest(true);
       setUser(GUEST_USER);
       setLoading(false);
@@ -50,11 +54,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    
+
     // Get initial session
     supabase.auth.getSession().then(async ({ data: { session }, error }) => {
+      console.log('📦 getSession result:', {
+        hasSession: !!session,
+        hasUser: !!session?.user,
+        userEmail: session?.user?.email,
+        error: error?.message
+      });
+
       if (error) {
-        console.error('Error getting session:', error);
+        console.error('❌ Error getting session:', error);
         // On error, enter guest mode
         setIsGuest(true);
         setUser(GUEST_USER);
@@ -62,32 +73,67 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setLoading(false);
         return;
       }
-      
-      // Verify session is still valid if it exists
+
+      // If we have a session, trust it first (don't block on validation)
       if (session?.user) {
-        try {
-          // Test if the session is actually valid by making a simple API call
-          const { data: testUser, error: testError } = await supabase.auth.getUser();
-          if (testError || !testUser?.user) {
-            throw new Error('Session invalid');
+        console.log('✅ Session found, user:', session.user.email);
+
+        // Immediately set authenticated state (don't wait for validation)
+        setSession(session);
+        setUser(session.user);
+        setIsGuest(false);
+        setLoading(false);
+
+        // Validate session in background (non-blocking)
+        // Only clear on real auth errors, not network/CORS errors
+        supabase.auth.getUser().then(({ data: testUser, error: testError }) => {
+          console.log('🔍 Background validation result:', {
+            hasUser: !!testUser?.user,
+            error: testError?.message,
+            errorStatus: testError?.status,
+            errorName: testError?.name
+          });
+
+          if (testError) {
+            // Check if this is a real authentication error
+            const isAuthError =
+              testError.status === 401 ||
+              testError.message?.includes('invalid_grant') ||
+              testError.message?.includes('invalid_token') ||
+              testError.message?.includes('JWT expired');
+
+            if (isAuthError) {
+              // Real auth error - clear session
+              console.error('🚫 Session is invalid (auth error), clearing:', testError);
+              supabase.auth.signOut();
+              setIsGuest(true);
+              setUser(GUEST_USER);
+              setSession(null);
+            } else {
+              // Network/CORS/other error - keep session
+              console.warn('⚠️ Session validation failed (non-auth error), keeping session:', testError);
+            }
+          } else if (!testUser?.user) {
+            // User doesn't exist - clear session
+            console.error('🚫 User not found, clearing session');
+            supabase.auth.signOut();
+            setIsGuest(true);
+            setUser(GUEST_USER);
+            setSession(null);
+          } else {
+            console.log('✅ Session validation successful');
           }
-          setSession(session);
-          setUser(session.user);
-          setIsGuest(false);
-        } catch (err) {
-          console.error('Session validation failed:', err);
-          // Session is invalid, clear it and enter guest mode
-          await supabase.auth.signOut();
-          setIsGuest(true);
-          setUser(GUEST_USER);
-          setSession(null);
-        }
+        }).catch(err => {
+          // Catch any unexpected errors from validation
+          console.warn('⚠️ Unexpected error during background validation, keeping session:', err);
+        });
       } else {
         // No authenticated user, automatically enter guest mode
+        console.log('👤 No session found, entering guest mode');
         setIsGuest(true);
         setUser(GUEST_USER);
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     // Listen for auth state changes
