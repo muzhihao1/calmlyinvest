@@ -271,10 +271,10 @@ export const insertRiskSettingsSchema = z.object({
 });
 
 /**
- * Zod schema for user preferences validation
- * Used in API endpoints for request validation
+ * Base Zod schema for user preferences validation (without cross-field refinement)
+ * Used to create both insert and update schemas
  */
-export const insertUserPreferencesSchema = z.object({
+const baseUserPreferencesSchema = z.object({
   userId: z.string().uuid(),
 
   // Core preferences (required)
@@ -331,7 +331,13 @@ export const insertUserPreferencesSchema = z.object({
 
   // Onboarding status
   onboardingCompleted: z.boolean().optional(),
-}).refine(
+});
+
+/**
+ * Zod schema for inserting user preferences
+ * Includes cross-field validation for goal/tolerance combinations
+ */
+export const insertUserPreferencesSchema = baseUserPreferencesSchema.refine(
   (data) => {
     // Cross-field validation: aggressive goal should not pair with conservative tolerance
     if (data.investmentGoal === 'growth' && data.riskTolerance === 'conservative') {
@@ -350,6 +356,6 @@ export const insertUserPreferencesSchema = z.object({
 );
 
 /**
- * Zod schema for updating user preferences (all fields optional)
+ * Zod schema for updating user preferences (all fields optional, userId excluded)
  */
-export const updateUserPreferencesSchema = insertUserPreferencesSchema.partial().omit({ userId: true });
+export const updateUserPreferencesSchema = baseUserPreferencesSchema.partial().omit({ userId: true });
