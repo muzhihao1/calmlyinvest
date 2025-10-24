@@ -1,5 +1,10 @@
-import { pgTable, text, uuid, decimal, date, boolean, timestamp, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, uuid, decimal, date, boolean, timestamp, integer, pgEnum, jsonb } from "drizzle-orm/pg-core";
 import { z } from "zod";
+
+// Enums for user preferences
+export const investmentGoalEnum = pgEnum('investment_goal_type', ['growth', 'income', 'capital_preservation', 'balanced']);
+export const riskToleranceEnum = pgEnum('risk_tolerance_type', ['conservative', 'moderate', 'aggressive']);
+export const investmentHorizonEnum = pgEnum('investment_horizon_type', ['short_term', 'medium_term', 'long_term']);
 
 // UUID-based schema for Supabase
 export const portfolios = pgTable("portfolios", {
@@ -109,6 +114,45 @@ export const riskSettings = pgTable("risk_settings", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
 });
 
+/**
+ * User preferences table for AI advisory system
+ * Stores investment goals, risk tolerance, and personalized thresholds
+ * Phase 2 implementation - User Preferences System
+ */
+export const userPreferences = pgTable("user_preferences", {
+  userId: uuid("user_id").primaryKey().notNull(), // References auth.users, one-to-one relationship
+
+  // Core preference fields (required)
+  investmentGoal: investmentGoalEnum("investment_goal").notNull(),
+  riskTolerance: riskToleranceEnum("risk_tolerance").notNull(),
+  investmentHorizon: investmentHorizonEnum("investment_horizon").notNull(),
+
+  // Risk threshold settings with defaults based on best practices
+  maxLeverageRatio: decimal("max_leverage_ratio", { precision: 6, scale: 2 }).notNull().default("1.5"),
+  maxConcentrationPct: decimal("max_concentration_pct", { precision: 5, scale: 2 }).notNull().default("25.0"),
+  maxSectorConcentrationPct: decimal("max_sector_concentration_pct", { precision: 5, scale: 2 }).notNull().default("40.0"),
+  minCashRatio: decimal("min_cash_ratio", { precision: 5, scale: 2 }).notNull().default("10.0"),
+  maxMarginUsagePct: decimal("max_margin_usage_pct", { precision: 5, scale: 2 }).notNull().default("50.0"),
+
+  // Optional advanced settings
+  targetBeta: decimal("target_beta", { precision: 6, scale: 4 }),
+  targetDelta: decimal("target_delta", { precision: 6, scale: 4 }),
+
+  // Sector preferences stored as JSON
+  // Structure: {"prefer": ["Technology", "Healthcare"], "avoid": ["Energy"]}
+  sectorPreferences: jsonb("sector_preferences").notNull().$type<{
+    prefer: string[];
+    avoid: string[];
+  }>().default({ prefer: [], avoid: [] }),
+
+  // Onboarding status
+  onboardingCompleted: boolean("onboarding_completed").notNull().default(false),
+
+  // Audit timestamps
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+});
+
 export const riskHistory = pgTable("risk_history", {
   id: uuid("id").defaultRandom().primaryKey(),
   portfolioId: uuid("portfolio_id").references(() => portfolios.id).notNull(),
@@ -154,6 +198,9 @@ export type RiskSettings = WithStringTimestamps<typeof riskSettings.$inferSelect
 export type InsertRiskSettings = WithStringTimestamps<typeof riskSettings.$inferInsert>;
 
 export type RiskHistory = WithStringTimestamps<typeof riskHistory.$inferSelect>;
+
+export type UserPreferences = WithStringTimestamps<typeof userPreferences.$inferSelect>;
+export type InsertUserPreferences = WithStringTimestamps<typeof userPreferences.$inferInsert>;
 
 // Zod schemas for validation (optional, for API validation)
 // Note: We create custom schemas instead of using createInsertSchema
@@ -222,3 +269,87 @@ export const insertRiskSettingsSchema = z.object({
   volatilityAlerts: z.boolean().optional(),
   dataUpdateFrequency: z.number().int().optional(),
 });
+
+/**
+ * Zod schema for user preferences validation
+ * Used in API endpoints for request validation
+ */
+export const insertUserPreferencesSchema = z.object({
+  userId: z.string().uuid(),
+
+  // Core preferences (required)
+  investmentGoal: z.enum(['growth', 'income', 'capital_preservation', 'balanced']),
+  riskTolerance: z.enum(['conservative', 'moderate', 'aggressive']),
+  investmentHorizon: z.enum(['short_term', 'medium_term', 'long_term']),
+
+  // Risk thresholds with validation
+  maxLeverageRatio: z.string()
+    .refine(val => parseFloat(val) > 0 && parseFloat(val) <= 10, {
+      message: 'Max leverage ratio must be between 0 and 10'
+    })
+    .optional(),
+  maxConcentrationPct: z.string()
+    .refine(val => parseFloat(val) > 0 && parseFloat(val) <= 100, {
+      message: 'Max concentration must be between 0 and 100'
+    })
+    .optional(),
+  maxSectorConcentrationPct: z.string()
+    .refine(val => parseFloat(val) > 0 && parseFloat(val) <= 100, {
+      message: 'Max sector concentration must be between 0 and 100'
+    })
+    .optional(),
+  minCashRatio: z.string()
+    .refine(val => parseFloat(val) >= 0 && parseFloat(val) <= 100, {
+      message: 'Min cash ratio must be between 0 and 100'
+    })
+    .optional(),
+  maxMarginUsagePct: z.string()
+    .refine(val => parseFloat(val) >= 0 && parseFloat(val) <= 100, {
+      message: 'Max margin usage must be between 0 and 100'
+    })
+    .optional(),
+
+  // Optional advanced settings
+  targetBeta: z.string()
+    .refine(val => parseFloat(val) >= -5 && parseFloat(val) <= 5, {
+      message: 'Target beta must be between -5 and 5'
+    })
+    .optional()
+    .nullable(),
+  targetDelta: z.string()
+    .refine(val => parseFloat(val) >= -100000 && parseFloat(val) <= 100000, {
+      message: 'Target delta must be between -100,000 and 100,000'
+    })
+    .optional()
+    .nullable(),
+
+  // Sector preferences
+  sectorPreferences: z.object({
+    prefer: z.array(z.string()).default([]),
+    avoid: z.array(z.string()).default([]),
+  }).optional(),
+
+  // Onboarding status
+  onboardingCompleted: z.boolean().optional(),
+}).refine(
+  (data) => {
+    // Cross-field validation: aggressive goal should not pair with conservative tolerance
+    if (data.investmentGoal === 'growth' && data.riskTolerance === 'conservative') {
+      return false;
+    }
+    // Conservative goal should not pair with aggressive tolerance
+    if (data.investmentGoal === 'capital_preservation' && data.riskTolerance === 'aggressive') {
+      return false;
+    }
+    return true;
+  },
+  {
+    message: 'Investment goal and risk tolerance combination is not recommended. Growth goals should not be paired with conservative tolerance, and capital preservation should not be paired with aggressive tolerance.',
+    path: ['investmentGoal'],
+  }
+);
+
+/**
+ * Zod schema for updating user preferences (all fields optional)
+ */
+export const updateUserPreferencesSchema = insertUserPreferencesSchema.partial().omit({ userId: true });
