@@ -43,7 +43,19 @@ export const optionHoldings = pgTable("option_holdings", {
   expirationDate: date("expiration_date").notNull(),
   costPrice: decimal("cost_price", { precision: 10, scale: 4 }).notNull(),
   currentPrice: decimal("current_price", { precision: 10, scale: 4 }),
+
+  // Option Greeks (calculated using Black-Scholes model)
   deltaValue: decimal("delta_value", { precision: 6, scale: 4 }),
+  gammaValue: decimal("gamma_value", { precision: 6, scale: 4 }),
+  thetaValue: decimal("theta_value", { precision: 6, scale: 4 }),
+  vegaValue: decimal("vega_value", { precision: 6, scale: 4 }),
+
+  // Implied volatility used for Greeks calculation
+  impliedVolatility: decimal("implied_volatility", { precision: 6, scale: 4 }),
+
+  // Timestamp when Greeks were last calculated
+  greeksUpdatedAt: timestamp("greeks_updated_at", { withTimezone: true }),
+
   status: text("status").default('ACTIVE').notNull(), // 'ACTIVE', 'CLOSED', 'ROLLED'
   closedAt: timestamp("closed_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
@@ -171,13 +183,14 @@ export const riskHistory = pgTable("risk_history", {
 // Types - Using drizzle's built-in type inference with timestamp override
 // Override timestamp fields to use string instead of Date for API compatibility
 // Allow null values to handle API endpoints that may pass null for optional timestamps
-type WithStringTimestamps<T> = Omit<T, 'createdAt' | 'updatedAt' | 'closedAt' | 'rolloverDate' | 'calculatedAt' | 'recordedAt'> & {
+type WithStringTimestamps<T> = Omit<T, 'createdAt' | 'updatedAt' | 'closedAt' | 'rolloverDate' | 'calculatedAt' | 'recordedAt' | 'greeksUpdatedAt'> & {
   createdAt?: string | null;
   updatedAt?: string | null;
   closedAt?: string | null;
   rolloverDate?: string | null;
   calculatedAt?: string | null;
   recordedAt?: string | null;
+  greeksUpdatedAt?: string | null;
 };
 
 export type Portfolio = WithStringTimestamps<typeof portfolios.$inferSelect>;

@@ -23,6 +23,7 @@ interface MarketDataProvider {
   getStockPrice(symbol: string): Promise<number>;
   getStockQuote(symbol: string): Promise<StockQuote>;
   getOptionPrice(optionSymbol: string): Promise<number>;
+  getOptionImpliedVolatility(optionSymbol: string): Promise<number | null>;
   getBatchStockPrices(symbols: string[]): Promise<Map<string, number>>;
   getBatchStockQuotes?(symbols: string[]): Promise<Map<string, StockQuote>>;
 }
@@ -107,15 +108,21 @@ class MockMarketDataProvider implements MarketDataProvider {
   async getOptionPrice(optionSymbol: string): Promise<number> {
     // Simple mock pricing based on option symbol
     await new Promise(resolve => setTimeout(resolve, 100));
-    
+
     // Extract strike price from option symbol (e.g., "MSFT 250718P500" -> 500)
     const match = optionSymbol.match(/(\d+)$/);
     const strikePrice = match ? parseInt(match[1]) : 100;
-    
+
     // Simple pricing model for mock data
     const basePrice = strikePrice * 0.03; // 3% of strike as base
     const variation = (Math.random() - 0.5) * 0.2; // ±10% variation
     return basePrice * (1 + variation);
+  }
+
+  async getOptionImpliedVolatility(optionSymbol: string): Promise<number | null> {
+    // Mock IV: return a reasonable value between 20% and 60%
+    await new Promise(resolve => setTimeout(resolve, 100));
+    return 0.25 + (Math.random() * 0.35); // 0.25 to 0.60 (25% to 60%)
   }
 
   async getBatchStockPrices(symbols: string[]): Promise<Map<string, number>> {
@@ -185,22 +192,22 @@ class YahooFinanceProvider implements MarketDataProvider {
       if (parts.length < 2) {
         throw new Error("Invalid option symbol format");
       }
-      
+
       const underlying = parts[0];
       const optionPart = parts[1];
-      
+
       // For now, estimate option price based on underlying stock price
       // Full option chain API requires more complex implementation
       const stockPrice = await this.getStockPrice(underlying);
-      
+
       // Extract strike price from option symbol
       const match = optionPart.match(/(\d+)$/);
       const strikePrice = match ? parseInt(match[1]) : 100;
-      
+
       // Simple estimation: option value roughly 2-5% of stock price
       const isCall = optionPart.includes('C');
       const inTheMoney = isCall ? (stockPrice > strikePrice) : (stockPrice < strikePrice);
-      
+
       if (inTheMoney) {
         return Math.abs(stockPrice - strikePrice) + (stockPrice * 0.02);
       } else {
@@ -210,6 +217,110 @@ class YahooFinanceProvider implements MarketDataProvider {
       console.error(`Failed to fetch option price for ${optionSymbol}:`, error);
       // Fallback to a reasonable estimate
       return 10.0;
+    }
+  }
+
+  /**
+   * Get implied volatility from Yahoo Finance option chain
+   *
+   * @param optionSymbol - Option symbol in format "UNDERLYING YYMMDDC/PSTRIKE"
+   *                       Example: "AAPL 250117C185" (AAPL Jan 17 2025 $185 Call)
+   * @returns Implied volatility as decimal (e.g., 0.30 for 30%) or null if not found
+   */
+  async getOptionImpliedVolatility(optionSymbol: string): Promise<number | null> {
+    try {
+      const yahooFinance = await getYahooFinance();
+
+      // Parse our option symbol format: "UNDERLYING YYMMDDC/PSTRIKE"
+      const parts = optionSymbol.split(' ');
+      if (parts.length < 2) {
+        console.error(`Invalid option symbol format: ${optionSymbol}`);
+        return null;
+      }
+
+      const underlying = parts[0];
+      const optionPart = parts[1];
+
+      // Extract expiration date: YYMMDD
+      const dateMatch = optionPart.match(/^(\d{2})(\d{2})(\d{2})/);
+      if (!dateMatch) {
+        console.error(`Cannot parse expiration date from: ${optionPart}`);
+        return null;
+      }
+
+      const [_, yy, mm, dd] = dateMatch;
+      const year = 2000 + parseInt(yy);
+      const month = parseInt(mm) - 1; // JavaScript months are 0-indexed
+      const day = parseInt(dd);
+      const expirationDate = new Date(year, month, day);
+
+      // Extract option type (C/P) and strike price
+      const optionTypeMatch = optionPart.match(/[CP]/);
+      const strikeMatch = optionPart.match(/(\d+)$/);
+
+      if (!optionTypeMatch || !strikeMatch) {
+        console.error(`Cannot parse option type or strike from: ${optionPart}`);
+        return null;
+      }
+
+      const optionType = optionTypeMatch[0].toLowerCase(); // 'c' or 'p'
+      const strikePrice = parseFloat(strikeMatch[1]);
+
+      console.log(`Fetching option chain for ${underlying}, expiration: ${expirationDate.toISOString().split('T')[0]}`);
+
+      // Fetch option chain from Yahoo Finance
+      const optionChain = await yahooFinance.options(underlying, {
+        date: expirationDate
+      });
+
+      if (!optionChain) {
+        console.warn(`No option chain data for ${underlying} on ${expirationDate.toISOString().split('T')[0]}`);
+        return null;
+      }
+
+      // Select calls or puts based on option type
+      const contracts = optionType === 'c' ? optionChain.calls : optionChain.puts;
+
+      if (!contracts || contracts.length === 0) {
+        console.warn(`No ${optionType === 'c' ? 'call' : 'put'} contracts found`);
+        return null;
+      }
+
+      // Find the contract with matching strike price
+      const matchingContract = contracts.find(contract =>
+        Math.abs(contract.strike - strikePrice) < 0.01 // Allow small floating point difference
+      );
+
+      if (!matchingContract) {
+        console.warn(`No contract found for strike ${strikePrice}, available strikes:`, contracts.map(c => c.strike));
+
+        // Fallback: find the closest strike and use its IV
+        const closestContract = contracts.reduce((prev, curr) =>
+          Math.abs(curr.strike - strikePrice) < Math.abs(prev.strike - strikePrice) ? curr : prev
+        );
+
+        if (closestContract && closestContract.impliedVolatility) {
+          console.log(`Using IV from closest strike ${closestContract.strike}: ${closestContract.impliedVolatility}`);
+          return closestContract.impliedVolatility;
+        }
+
+        return null;
+      }
+
+      // Return implied volatility (already in decimal format from Yahoo Finance)
+      const iv = matchingContract.impliedVolatility;
+
+      if (iv === undefined || iv === null) {
+        console.warn(`Implied volatility not available for ${optionSymbol}`);
+        return null;
+      }
+
+      console.log(`✅ Fetched IV for ${optionSymbol}: ${(iv * 100).toFixed(2)}%`);
+      return iv;
+
+    } catch (error) {
+      console.error(`Failed to fetch implied volatility for ${optionSymbol}:`, error);
+      return null;
     }
   }
 
@@ -431,4 +542,24 @@ export async function searchStocks(query: string): Promise<any[]> {
     console.error('Stock search failed:', error);
     return [];
   }
+}
+
+/**
+ * Get implied volatility for an option symbol
+ *
+ * This is a helper function to fetch IV from Yahoo Finance option chains.
+ * Used as input for Black-Scholes Greeks calculation.
+ *
+ * @param optionSymbol - Option symbol in format "UNDERLYING YYMMDDC/PSTRIKE"
+ * @returns Implied volatility as decimal (e.g., 0.30 for 30%) or null if not found
+ *
+ * @example
+ * const iv = await getImpliedVolatility('AAPL 250117C185');
+ * if (iv) {
+ *   console.log(`Implied Volatility: ${(iv * 100).toFixed(2)}%`);
+ * }
+ */
+export async function getImpliedVolatility(optionSymbol: string): Promise<number | null> {
+  const provider = getMarketDataProvider();
+  return provider.getOptionImpliedVolatility(optionSymbol);
 }
