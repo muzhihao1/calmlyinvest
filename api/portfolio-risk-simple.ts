@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 import { calculateGreeksForOption } from '../server/services/greeks-calculator';
 import { getMarketDataProvider } from '../server/market-data';
+import { MarketDataProvider } from '../server/marketdata-provider';
 
 /**
  * Extract token from Authorization header
@@ -160,56 +161,127 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(500).json({ error: 'Failed to fetch options' });
     }
 
-    // Calculate and update Greeks for option holdings using Black-Scholes model
+    // Calculate and update Greeks for option holdings
+    // Priority: Market Data API (real data) > Black-Scholes (calculated fallback)
     if (options && options.length > 0) {
-      console.log(`📊 Calculating Greeks for ${options.length} option(s) using Black-Scholes model...`);
+      console.log(`📊 Fetching Greeks for ${options.length} option(s)...`);
 
       try {
-        const marketDataProvider = getMarketDataProvider();
+        // Check if Market Data API is configured
+        const marketDataToken = process.env.MARKETDATA_API_TOKEN;
+        const useMarketDataAPI = !!marketDataToken;
 
-        // Calculate Greeks for each option
+        if (useMarketDataAPI) {
+          console.log('✅ Using Market Data API for real-time Greeks');
+        } else {
+          console.log('⚠️ Market Data API not configured, using Black-Scholes calculation');
+        }
+
+        const marketDataAPI = useMarketDataAPI ? new MarketDataProvider() : null;
+        const yahooProvider = getMarketDataProvider();
+
+        // Fetch Greeks for each option
         const greeksUpdates = await Promise.all(
           options.map(async (option: any) => {
             try {
-              // Get underlying stock price
-              const underlyingPrice = await marketDataProvider.getStockPrice(option.underlying_symbol);
+              let greeks = null;
+              let impliedVolatility = null;
+              let price = null;
+              let dataSource = '';
 
-              // Get implied volatility from Yahoo Finance option chain
-              const iv = await marketDataProvider.getOptionImpliedVolatility(option.option_symbol);
+              // Method 1: Try Market Data API first (if configured)
+              if (marketDataAPI) {
+                try {
+                  console.log(`📡 [Market Data API] Fetching ${option.option_symbol}...`);
 
-              if (!iv) {
-                console.warn(`⚠️ No IV available for ${option.option_symbol}, using default 0.30`);
+                  const marketQuote = await marketDataAPI.getOptionQuote(option.option_symbol);
+
+                  greeks = {
+                    delta: marketQuote.delta,
+                    gamma: marketQuote.gamma,
+                    theta: marketQuote.theta,
+                    vega: marketQuote.vega,
+                    price: marketQuote.price
+                  };
+                  impliedVolatility = marketQuote.impliedVolatility || null;
+                  price = marketQuote.price;
+                  dataSource = 'Market Data API (real-time)';
+
+                  console.log(`✅ [Market Data API] ${option.option_symbol}: Delta=${greeks.delta.toFixed(4)}, Price=$${price.toFixed(2)}`);
+                } catch (apiError: any) {
+                  console.warn(`⚠️ [Market Data API] Failed for ${option.option_symbol}: ${apiError.message}`);
+                  // Fall through to Black-Scholes calculation
+                }
               }
 
-              // Calculate Greeks using Black-Scholes model
-              const greeks = await calculateGreeksForOption({
-                underlyingPrice: underlyingPrice,
-                strikePrice: parseFloat(option.strike_price),
-                expiryDate: new Date(option.expiration_date),
-                impliedVolatility: iv || 0.30, // Default to 30% IV if not available
-                optionType: option.option_type.toLowerCase() as 'call' | 'put',
-                riskFreeRate: 0.05 // 5% annual rate (can be made configurable)
-              });
+              // Method 2: Fallback to Black-Scholes if Market Data API failed or not configured
+              if (!greeks) {
+                try {
+                  console.log(`🧮 [Black-Scholes] Calculating ${option.option_symbol}...`);
 
-              console.log(`✅ ${option.option_symbol}: Delta=${greeks.delta}, Gamma=${greeks.gamma}, Theta=${greeks.theta}, Vega=${greeks.vega}`);
+                  // Get underlying stock price
+                  const underlyingPrice = await yahooProvider.getStockPrice(option.underlying_symbol);
 
-              return {
-                id: option.id,
-                greeks: greeks,
-                impliedVolatility: iv
-              };
+                  // Get implied volatility from Yahoo Finance option chain
+                  const iv = await yahooProvider.getOptionImpliedVolatility(option.option_symbol);
+
+                  if (!iv) {
+                    console.warn(`⚠️ No IV available for ${option.option_symbol}, using default 0.30`);
+                  }
+
+                  // Calculate Greeks using Black-Scholes model
+                  const bsGreeks = await calculateGreeksForOption({
+                    underlyingPrice: underlyingPrice,
+                    strikePrice: parseFloat(option.strike_price),
+                    expiryDate: new Date(option.expiration_date),
+                    impliedVolatility: iv || 0.30, // Default to 30% IV if not available
+                    optionType: option.option_type.toLowerCase() as 'call' | 'put',
+                    riskFreeRate: 0.05 // 5% annual rate
+                  });
+
+                  greeks = bsGreeks;
+                  impliedVolatility = iv;
+                  price = bsGreeks.price;
+                  dataSource = 'Black-Scholes (calculated)';
+
+                  console.log(`✅ [Black-Scholes] ${option.option_symbol}: Delta=${greeks.delta.toFixed(4)}, Calculated Price=$${price.toFixed(2)}`);
+                } catch (bsError: any) {
+                  console.error(`❌ [Black-Scholes] Failed for ${option.option_symbol}: ${bsError.message}`);
+                  // Both methods failed
+                }
+              }
+
+              if (greeks) {
+                return {
+                  id: option.id,
+                  greeks: greeks,
+                  impliedVolatility: impliedVolatility,
+                  price: price,
+                  dataSource: dataSource
+                };
+              } else {
+                return {
+                  id: option.id,
+                  greeks: null,
+                  impliedVolatility: null,
+                  price: null,
+                  dataSource: 'Failed'
+                };
+              }
             } catch (error) {
-              console.error(`❌ Failed to calculate Greeks for ${option.option_symbol}:`, error);
+              console.error(`❌ Failed to fetch Greeks for ${option.option_symbol}:`, error);
               return {
                 id: option.id,
                 greeks: null,
-                impliedVolatility: null
+                impliedVolatility: null,
+                price: null,
+                dataSource: 'Error'
               };
             }
           })
         );
 
-        // Update database with calculated Greeks
+        // Update database with fetched/calculated Greeks
         const updatePromises = greeksUpdates
           .filter(update => update.greeks !== null)
           .map(update =>
@@ -221,6 +293,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 theta_value: update.greeks!.theta.toString(),
                 vega_value: update.greeks!.vega.toString(),
                 implied_volatility: update.impliedVolatility?.toString(),
+                current_price: update.price?.toString(), // Update price if available
                 greeks_updated_at: new Date().toISOString()
               })
               .eq('id', update.id)
@@ -228,10 +301,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         if (updatePromises.length > 0) {
           await Promise.all(updatePromises);
+
+          // Count data sources
+          const marketDataCount = greeksUpdates.filter(u => u.dataSource?.includes('Market Data')).length;
+          const blackScholesCount = greeksUpdates.filter(u => u.dataSource?.includes('Black-Scholes')).length;
+          const failedCount = greeksUpdates.filter(u => !u.greeks).length;
+
           console.log(`✅ Updated Greeks for ${updatePromises.length} option(s) in database`);
+          console.log(`   📊 Data sources: Market Data API=${marketDataCount}, Black-Scholes=${blackScholesCount}, Failed=${failedCount}`);
         }
 
-        // Attach calculated Greeks to options for use in calculations below
+        // Attach fetched/calculated Greeks to options for use in calculations below
         options.forEach((option: any) => {
           const update = greeksUpdates.find(u => u.id === option.id);
           if (update && update.greeks) {
@@ -240,12 +320,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             option.theta_value = update.greeks.theta;
             option.vega_value = update.greeks.vega;
             option.implied_volatility = update.impliedVolatility;
+            if (update.price) {
+              option.current_price = update.price.toString();
+            }
           }
         });
 
       } catch (error) {
-        console.error('❌ Error calculating Greeks:', error);
-        // Continue with risk calculation even if Greeks calculation fails
+        console.error('❌ Error fetching Greeks:', error);
+        // Continue with risk calculation even if Greeks fetching fails
       }
     }
 
@@ -547,12 +630,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       stockUnrealizedPnL: totalStockUnrealizedPnL.toFixed(2),
       optionUnrealizedPnL: totalOptionUnrealizedPnL.toFixed(2),
 
-      // Portfolio Greeks (calculated using Black-Scholes model)
+      // Portfolio Greeks (from Market Data API or Black-Scholes fallback)
       totalDelta: totalDelta.toFixed(2),
       totalGamma: totalGamma.toFixed(4),
       totalTheta: totalTheta.toFixed(2),
       totalVega: totalVega.toFixed(2),
-      greeksNote: 'Calculated using Black-Scholes model (1-2% accuracy)',
+      greeksDataSource: process.env.MARKETDATA_API_TOKEN ? 'Market Data API (real-time)' : 'Black-Scholes (calculated)',
 
       // Portfolio details
       totalEquity: totalEquity.toFixed(2),
